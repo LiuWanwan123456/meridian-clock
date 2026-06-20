@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>子午流注时钟</title>
+    <style>
+        /* ===== 全局重置 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+            background: #F5EDE4;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        /* ===== 主容器 ===== */
+        .container {
+            max-width: 480px;
+            width: 100%;
+            background: #FDF8F2;
+            border-radius: 28px;
+            padding: 24px 20px 28px;
+            box-shadow: 0 8px 40px rgba(139, 0, 0, 0.12);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        /* ===== 顶部装饰 ===== */
+        .container::before {
+            content: '☯';
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 80px;
+            opacity: 0.06;
+            transform: rotate(15deg);
+        }
+
+        /* ===== 标题 ===== */
+        .header {
+            text-align: center;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #E8D5C0;
+            margin-bottom: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 22px;
+            color: #6B2E1A;
+            letter-spacing: 6px;
+            font-weight: 700;
+        }
+        .header .badge {
+            font-size: 11px;
+            background: #E8D5C0;
+            padding: 2px 12px;
+            border-radius: 20px;
+            color: #6B2E1A;
+        }
+
+        /* ===== 中心时间显示 ===== */
+        .center-display {
+            text-align: center;
+            padding: 12px 0 16px;
+            position: relative;
+        }
+        .center-display .time {
+            font-size: 56px;
+            font-weight: 700;
+            color: #3D2012;
+            letter-spacing: 4px;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+        .center-display .time .seconds {
+            font-size: 20px;
+            color: #B8860B;
+            font-weight: 400;
+            margin-left: 4px;
+        }
+        .center-display .meridian-main {
+            font-size: 28px;
+            color: #8B1A1A;
+            font-weight: 700;
+            margin-top: 2px;
+            background: #F5EDE4;
+            display: inline-block;
+            padding: 2px 24px;
+            border-radius: 30px;
+            letter-spacing: 2px;
+        }
+        .center-display .advice {
+            font-size: 14px;
+            color: #A0806A;
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+        .center-display .advice span {
+            background: #EDE3D8;
+            padding: 1px 14px;
+            border-radius: 12px;
+        }
+
+        /* ===== 环形经络网格 ===== */
+        .ring-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin: 16px 0 18px;
+            padding: 8px;
+            background: #F5EDE4;
+            border-radius: 20px;
+            position: relative;
+        }
+        .ring-grid::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: #FDF8F2;
+            border: 2px solid #DCC8B6;
+            pointer-events: none;
+            box-shadow: 0 0 0 4px #F5EDE4;
+        }
+
+        .cell {
+            background: #FDF8F2;
+            border-radius: 10px;
+            padding: 8px 2px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.4s ease;
+            cursor: default;
+            position: relative;
+            z-index: 1;
+        }
+        .cell .hour-label {
+            font-size: 10px;
+            color: #B09880;
+            font-weight: 500;
+        }
+        .cell .name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #5A3E2B;
+            margin-top: 1px;
+            transition: color 0.3s;
+        }
+        .cell .icon {
+            font-size: 12px;
+        }
+
+        /* 当前时辰高亮 */
+        .cell.active {
+            background: #FFD700;
+            border-color: #B8860B;
+            transform: scale(1.04);
+            box-shadow: 0 2px 16px rgba(255, 215, 0, 0.45);
+        }
+        .cell.active .name {
+            color: #6B1A1A;
+        }
+        .cell.active .hour-label {
+            color: #8B6914;
+        }
+
+        /* ===== 控制面板 ===== */
+        .controls {
+            background: #F5EDE4;
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin: 4px 0 12px;
+        }
+        .controls .row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+        }
+        .controls .row:last-child {
+            margin-bottom: 0;
+        }
+        .controls label {
+            font-size: 13px;
+            color: #5A3E2B;
+            font-weight: 500;
+        }
+        .btn {
+            background: #DCC8B6;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            color: #3D2012;
+            transition: all 0.15s;
+            min-width: 40px;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        .btn:active {
+            transform: scale(0.92);
+            background: #C8B4A0;
+        }
+        .btn-primary {
+            background: #8B1A1A;
+            color: #fff;
+        }
+        .btn-primary:active {
+            background: #6B1414;
+        }
+        .btn-secondary {
+            background: #B8A99A;
+            color: #fff;
+        }
+        .btn-secondary:active {
+            background: #A09080;
+        }
+        .offset-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: #8B1A1A;
+            min-width: 48px;
+            text-align: center;
+        }
+        .manual-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        .manual-row select {
+            padding: 4px 6px;
+            border-radius: 8px;
+            border: 1.5px solid #DCC8B6;
+            font-size: 16px;
+            background: #fff;
+            width: 60px;
+            text-align: center;
+            color: #3D2012;
+            font-weight: 600;
+        }
+        .manual-row select:focus {
+            outline: none;
+            border-color: #8B1A1A;
+        }
+
+        /* ===== 状态栏 ===== */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #A0806A;
+            padding: 4px 2px 0;
+            border-top: 1px solid #EDE3D8;
+            margin-top: 8px;
+            padding-top: 8px;
+        }
+        .status-bar .mode {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .status-bar .tag {
+            background: #EDE3D8;
+            padding: 0 10px;
+            border-radius: 10px;
+            font-size: 10px;
+            color: #6B4E3A;
+        }
+
+        /* ===== 小部件模式（精简） ===== */
+        body.widget-mode .container {
+            padding: 12px 12px 14px;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(139, 0, 0, 0.08);
+            max-width: 320px;
+        }
+        body.widget-mode .header h1 {
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+        body.widget-mode .header .badge {
+            display: none;
+        }
+        body.widget-mode .center-display .time {
+            font-size: 32px;
+        }
+        body.widget-mode .center-display .time .seconds {
+            font-size: 14px;
+        }
+        body.widget-mode .center-display .meridian-main {
+            font-size: 18px;
+            padding: 0 16px;
+        }
+        body.widget-mode .center-display .advice {
+            font-size: 11px;
+        }
+        body.widget-mode .ring-grid {
+            gap: 3px;
+            padding: 4px;
+            margin: 8px 0 10px;
+        }
+        body.widget-mode .ring-grid::after {
+            width: 44px;
+            height: 44px;
+        }
+        body.widget-mode .cell {
+            padding: 4px 1px;
+            border-radius: 6px;
+        }
+        body.widget-mode .cell .hour-label {
+            font-size: 7px;
+        }
+        body.widget-mode .cell .name {
+            font-size: 9px;
+        }
+        body.widget-mode .cell .icon {
+            font-size: 8px;
+        }
+        body.widget-mode .controls {
+            display: none;
+        }
+        body.widget-mode .status-bar {
+            font-size: 9px;
+            padding-top: 4px;
+            margin-top: 4px;
+        }
+        body.widget-mode .status-bar .tag {
+            font-size: 8px;
+            padding: 0 6px;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 400px) {
+            .container {
+                padding: 16px 12px 20px;
+            }
+            .center-display .time {
+                font-size: 42px;
+            }
+            .center-display .meridian-main {
+                font-size: 22px;
+            }
+            .cell .name {
+                font-size: 12px;
+            }
+            body.widget-mode .center-display .time {
+                font-size: 26px;
+            }
+            body.widget-mode .cell .name {
+                font-size: 8px;
+            }
+        }
+
+        /* ===== 滚动条美化 ===== */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F5EDE4;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #DCC8B6;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <!-- 头部 -->
+    <div class="header">
+        <h1>☯ 子午流注</h1>
+        <span class="badge" id="modeBadge">实时</span>
+    </div>
+
+    <!-- 中心显示 -->
+    <div class="center-display">
+        <div class="time">
+            <span id="hourDisplay">--</span>:<span id="minDisplay">--</span>
+            <span class="seconds" id="secDisplay">--</span>
+        </div>
+        <div class="meridian-main" id="meridianMain">--</div>
+        <div class="advice"><span id="adviceText">🌿 养生指南</span></div>
+    </div>
+
+    <!-- 环形经络网格 -->
+    <div class="ring-grid" id="ringGrid"></div>
+
+    <!-- 控制面板 -->
+    <div class="controls" id="controlsPanel">
+        <div class="row">
+            <label>🌏 真太阳时</label>
+            <button class="btn" id="btnSub">−</button>
+            <span class="offset-text" id="offsetDisplay">+0h</span>
+            <button class="btn" id="btnAdd">+</button>
+            <button class="btn btn-secondary" id="btnReset">同步</button>
+        </div>
+        <div class="manual-row">
+            <label>🕐 手动</label>
+            <select id="selHour"></select>
+            <span style="font-weight:700;color:#5A3E2B;">:</span>
+            <select id="selMinute"></select>
+            <button class="btn btn-primary" id="btnSetManual">设定</button>
+        </div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <span class="mode" id="statusMode">📱 手机时间</span>
+        <span class="tag" id="statusTag">时差 0h</span>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // 数据：十二经络（时辰起始小时）
+    // ============================================================
+    const MERIDIANS = [
+        { hour: 23, name: '胆经', icon: '🌙', advice: '宜入睡' },
+        { hour: 1, name: '肝经', icon: '💤', advice: '熟睡养肝' },
+        { hour: 3, name: '肺经', icon: '🌅', advice: '深睡养肺' },
+        { hour: 5, name: '大肠经', icon: '🚽', advice: '宜排便' },
+        { hour: 7, name: '胃经', icon: '🍳', advice: '吃早餐' },
+        { hour: 9, name: '脾经', icon: '💪', advice: '效率高峰' },
+        { hour: 11, name: '心经', icon: '🧠', advice: '精神饱满' },
+        { hour: 13, name: '小肠经', icon: '🥗', advice: '午餐时间' },
+        { hour: 15, name: '膀胱经', icon: '💧', advice: '多喝水' },
+        { hour: 17, name: '肾经', icon: '🌆', advice: '收藏精气' },
+        { hour: 19, name: '心包经', icon: '❤️', advice: '放松心情' },
+        { hour: 21, name: '三焦经', icon: '🛀', advice: '准备入睡' }
+    ];
+
+    // ============================================================
+    // 状态
+    // ============================================================
+    let timeOffset = 0;          // 时差（小时）
+    let useManual = false;
+    let manualHour = 0;
+    let manualMinute = 0;
+    let isWidgetMode = false;
+
+    // ============================================================
+    // DOM 引用
+    // ============================================================
+    const $hour = document.getElementById('hourDisplay');
+    const $min = document.getElementById('minDisplay');
+    const $sec = document.getElementById('secDisplay');
+    const $meridianMain = document.getElementById('meridianMain');
+    const $advice = document.getElementById('adviceText');
+    const $grid = document.getElementById('ringGrid');
+    const $offset = document.getElementById('offsetDisplay');
+    const $statusMode = document.getElementById('statusMode');
+    const $statusTag = document.getElementById('statusTag');
+    const $modeBadge = document.getElementById('modeBadge');
+    const $selHour = document.getElementById('selHour');
+    const $selMinute = document.getElementById('selMinute');
+
+    // ============================================================
+    // 检测是否为小部件模式（URL参数 ?widget=true）
+    // ============================================================
+    function detectWidgetMode() {
+        const params = new URLSearchParams(window.location.search);
+        isWidgetMode = params.get('widget') === 'true';
+        if (isWidgetMode) {
+            document.body.classList.add('widget-mode');
+            $modeBadge.textContent = '小部件';
+        } else {
+            $modeBadge.textContent = '完整版';
+        }
+    }
+
+    // ============================================================
+    // 初始化选择器
+    // ============================================================
+    function initSelectors() {
+        for (let i = 0; i < 24; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = String(i).padStart(2, '0');
+            $selHour.appendChild(opt);
+        }
+        for (let i = 0; i < 60; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = String(i).padStart(2, '0');
+            $selMinute.appendChild(opt);
+        }
+        const now = new Date();
+        $selHour.value = now.getHours();
+        $selMinute.value = now.getMinutes();
+    }
+
+    // ============================================================
+    // 构建经络网格
+    // ============================================================
+    function buildGrid() {
+        $grid.innerHTML = '';
+        MERIDIANS.forEach((m, index) => {
+            const div = document.createElement('div');
+            div.className = 'cell';
+            div.dataset.index = index;
+            div.dataset.name = m.name;
+            const hourStr = String(m.hour).padStart(2, '0') + ':00';
+            div.innerHTML = `
+                <div class="hour-label">${hourStr}</div>
+                <div class="icon">${m.icon}</div>
+                <div class="name">${m.name}</div>
+            `;
+            $grid.appendChild(div);
+        });
+    }
+
+    // ============================================================
+    // 核心：获取当前当令经络
+    // ============================================================
+    function getMeridianInfo(hour, minute) {
+        // 子时特殊处理（23:00 - 00:59）
+        if (hour === 23 || hour === 0) {
+            return MERIDIANS[0];
+        }
+        for (const m of MERIDIANS) {
+            if (hour >= m.hour && hour < m.hour + 2) {
+                return m;
+            }
+        }
+        return MERIDIANS[0]; // fallback
+    }
+
+    // ============================================================
+    // 获取当前时间（考虑时差/手动）
+    // ============================================================
+    function getCurrentTime() {
+        let hour, minute, second;
+        if (useManual) {
+            hour = manualHour;
+            minute = manualMinute;
+            second = 0;
+        } else {
+            const d = new Date();
+            d.setHours(d.getHours() + timeOffset);
+            hour = d.getHours();
+            minute = d.getMinutes();
+            second = d.getSeconds();
+        }
+        return { hour, minute, second };
+    }
+
+    // ============================================================
+    // 更新所有UI
+    // ============================================================
+    function updateUI() {
+        const { hour, minute, second } = getCurrentTime();
+
+        // 时间
+        $hour.textContent = String(hour).padStart(2, '0');
+        $min.textContent = String(minute).padStart(2, '0');
+        $sec.textContent = String(second).padStart(2, '0');
+
+        // 经络
+        const info = getMeridianInfo(hour, minute);
+        $meridianMain.textContent = '⚡ ' + info.name;
+        $advice.textContent = info.icon + ' ' + info.advice;
+
+        // 网格高亮
+        const cells = $grid.querySelectorAll('.cell');
+        cells.forEach(cell => {
+            cell.classList.toggle('active', cell.dataset.name === info.name);
+        });
+
+        // 状态栏
+        if (useManual) {
+            $statusMode.textContent = '✋ 手动模式';
+            $statusTag.textContent = `设定 ${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+        } else if (timeOffset !== 0) {
+            $statusMode.textContent = '🌏 真太阳时';
+            $statusTag.textContent = `时差 ${timeOffset >= 0 ? '+' : ''}${timeOffset}h`;
+        } else {
+            $statusMode.textContent = '📱 手机时间';
+            $statusTag.textContent = '实时同步';
+        }
+
+        // 偏移显示
+        $offset.textContent = (timeOffset >= 0 ? '+' : '') + timeOffset + 'h';
+    }
+
+    // ============================================================
+    // 按钮事件
+    // ============================================================
+    function setupControls() {
+        document.getElementById('btnSub').addEventListener('click', () => {
+            timeOffset--;
+            useManual = false;
+            updateUI();
+        });
+
+        document.getElementById('btnAdd').addEventListener('click', () => {
+            timeOffset++;
+            useManual = false;
+            updateUI();
+        });
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            timeOffset = 0;
+            useManual = false;
+            updateUI();
+        });
+
+        document.getElementById('btnSetManual').addEventListener('click', () => {
+            manualHour = parseInt($selHour.value);
+            manualMinute = parseInt($selMinute.value);
+            useManual = true;
+            updateUI();
+        });
+    }
+
+    // ============================================================
+    // 初始化
+    // ============================================================
+    function init() {
+        detectWidgetMode();
+        initSelectors();
+        buildGrid();
+        setupControls();
+        updateUI();
+
+        // 每秒更新
+        setInterval(updateUI, 1000);
+
+        // 如果在小部件模式，降低刷新频率节省性能（但为了准确，保持每秒）
+        console.log('☯ 子午流注已启动 | 模式:', isWidgetMode ? '小部件' : '完整版');
+    }
+
+    // DOM就绪后启动
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+</script>
+
+</body>
+</html>
