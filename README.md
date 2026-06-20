@@ -1,2 +1,0 @@
-# meridian-clock
-meridian-clock
