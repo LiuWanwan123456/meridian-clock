@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 背景 -->
+  <circle cx="256" cy="256" r="256" fill="#EEF6F3"/>
+
+  <!-- 山水背景纹 -->
+  <path d="M0,380 Q128,320 256,350 Q384,380 512,330 L512,512 L0,512Z" fill="#C8DDD8" opacity="0.5"/>
+  <path d="M0,420 Q160,390 320,410 Q420,420 512,400 L512,512 L0,512Z" fill="#7AAB8E" opacity="0.35"/>
+
+  <!-- 外圈 -->
+  <circle cx="256" cy="256" r="218" fill="none" stroke="#3A6B5A" stroke-width="6" opacity="0.5"/>
+  <circle cx="256" cy="256" r="208" fill="none" stroke="#3A6B5A" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- 阴阳图 — 松绿色调 -->
+  <!-- 右半（深松绿/阴） -->
+  <path d="M256,60 A196,196 0 0,1 256,452 A98,98 0 0,0 256,256 A98,98 0 0,1 256,60Z" fill="#3A6B5A"/>
+  <!-- 左半（浅天青/阳） -->
+  <path d="M256,60 A196,196 0 0,0 256,452 A98,98 0 0,1 256,256 A98,98 0 0,0 256,60Z" fill="#C8DDD8"/>
+
+  <!-- 上小圆（阳中阴，浅） -->
+  <circle cx="256" cy="158" r="49" fill="#C8DDD8"/>
+  <!-- 下小圆（阴中阳，深） -->
+  <circle cx="256" cy="354" r="49" fill="#3A6B5A"/>
+
+  <!-- 上小小圆（阴，深） -->
+  <circle cx="256" cy="158" r="19" fill="#3A6B5A"/>
+  <!-- 下小小圆（阳，浅） -->
+  <circle cx="256" cy="354" r="19" fill="#C8DDD8"/>
+
+  <!-- 大圆边 -->
+  <circle cx="256" cy="256" r="196" fill="none" stroke="#274D3E" stroke-width="4" opacity="0.5"/>
+
+  <!-- 外圈文字：日 -->
+  <text x="256" y="40" font-size="28" font-family="serif" text-anchor="middle" fill="#3A6B5A" opacity="0.7">日</text>
+
+  <!-- 底部小字 -->
+  <text x="256" y="490" font-size="22" font-family="serif" text-anchor="middle" fill="#3A6B5A" opacity="0.55">子午</text>
+</svg>
