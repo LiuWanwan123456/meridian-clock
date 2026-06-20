@@ -507,8 +507,7 @@
     // ============================================================
     let currentLongitude = null;        // 当前使用的经度
     let isUsingGps = false;
-    let gpsLongitude = null;
-    let manualLongitude = 116.4;        // 默认北京
+    let clockInterval = null;           // 时钟更新定时器
 
     // ============================================================
     // DOM 引用
@@ -532,7 +531,7 @@
     const $manualLongitude = document.getElementById('manualLongitude');
 
     // ============================================================
-    // 工具：均时差计算
+    // 工具：均时差计算（修复版）
     // ============================================================
     function equationOfTime(dayOfYear) {
         // 近似公式，精度约 ±1 分钟
@@ -542,14 +541,17 @@
     }
 
     // ============================================================
-    // 核心：计算真太阳时
+    // 核心：计算真太阳时（修复版）
     // ============================================================
     function calculateTrueSolarTime(longitude) {
         const now = new Date();
         const utcHours = now.getUTCHours();
         const utcMinutes = now.getUTCMinutes();
         const utcSeconds = now.getUTCSeconds();
-        const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+
+        // 【修复】正确计算一年中的第几天
+        const startOfYear = new Date(now.getFullYear(), 0, 1); // 1月1日
+        const dayOfYear = Math.floor((now - startOfYear) / 86400000) + 1;
 
         // 1. 经度修正（中国时区基准经度 120°E）
         const standardMeridian = 120.0;
@@ -565,6 +567,8 @@
         let totalMinutes = utcHours * 60 + utcMinutes + totalOffset;
         let finalHour = Math.floor(totalMinutes / 60) % 24;
         let finalMinute = Math.round(totalMinutes % 60);
+
+        // 处理进位/借位
         if (finalMinute >= 60) {
             finalMinute -= 60;
             finalHour = (finalHour + 1) % 24;
@@ -620,11 +624,11 @@
     buildGrid();
 
     // ============================================================
-    // 更新所有 UI
+    // 更新所有 UI（修复版）
     // ============================================================
     function updateUI() {
+        // 【修复】如果经度未设置，不执行更新
         if (currentLongitude === null) {
-            // 还未获取到位置
             return;
         }
 
@@ -655,7 +659,7 @@
         // 状态栏
         const source = isUsingGps ? 'GPS' : '手动';
         $statusMode.textContent = '📍 ' + source + ' · 经度 ' + currentLongitude.toFixed(2) + '°E';
-        $statusTag.textContent = '真太阳时';
+        $statusTag.textContent = '真太阳时 第' + result.dayOfYear + '天';
     }
 
     // ============================================================
@@ -673,17 +677,24 @@
     }
 
     // ============================================================
-    // 使用指定的经度启动时钟
+    // 启动时钟（修复版）
     // ============================================================
     function startClockWithLongitude(longitude, source) {
         currentLongitude = longitude;
         isUsingGps = (source === 'gps');
         setLocationStatus('已定位 · ' + longitude.toFixed(2) + '°E', 'success', longitude);
+
+        // 立即更新一次
         updateUI();
 
+        // 【修复】清除旧定时器，避免重复
+        if (clockInterval) {
+            clearInterval(clockInterval);
+            clockInterval = null;
+        }
+
         // 每秒更新
-        if (window.clockInterval) clearInterval(window.clockInterval);
-        window.clockInterval = setInterval(updateUI, 1000);
+        clockInterval = setInterval(updateUI, 1000);
     }
 
     // ============================================================
@@ -694,7 +705,6 @@
 
         if (!navigator.geolocation) {
             setLocationStatus('浏览器不支持 GPS', 'error');
-            // 降级到手动模式
             showManualMode();
             return;
         }
@@ -702,9 +712,7 @@
         navigator.geolocation.getCurrentPosition(
             // 成功
             (position) => {
-                const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
-                gpsLongitude = lon;
                 setLocationStatus('GPS 定位成功', 'success', lon);
                 startClockWithLongitude(lon, 'gps');
             },
@@ -712,7 +720,6 @@
             (error) => {
                 console.warn('GPS 定位失败:', error.message);
                 setLocationStatus('GPS 失败，使用默认经度', 'error');
-                // 降级：使用手动输入的经度或默认北京
                 const fallbackLon = parseFloat($manualLongitude.value) || 116.4;
                 startClockWithLongitude(fallbackLon, 'manual');
                 showManualMode();
@@ -738,7 +745,6 @@
             alert('请输入有效经度（-180 ~ 180）');
             return;
         }
-        manualLongitude = val;
         startClockWithLongitude(val, 'manual');
         $manualRow.style.display = 'flex';
     }
@@ -752,7 +758,6 @@
 
     document.getElementById('btnManualMode').addEventListener('click', () => {
         showManualMode();
-        // 如果当前没有定位，用默认值
         if (currentLongitude === null) {
             const val = parseFloat($manualLongitude.value) || 116.4;
             startClockWithLongitude(val, 'manual');
@@ -761,7 +766,6 @@
 
     document.getElementById('btnApplyManual').addEventListener('click', applyManualLongitude);
 
-    // 回车键触发应用
     $manualLongitude.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') applyManualLongitude();
     });
@@ -770,10 +774,9 @@
     // 初始化
     // ============================================================
     function init() {
-        // 先隐藏加载遮罩（如果5秒后还没定位成功，自动降级）
+        // 5秒后如果还没定位成功，自动降级
         setTimeout(() => {
             if (currentLongitude === null) {
-                // 5秒后还没定位成功，使用默认经度（北京）
                 setLocationStatus('定位超时，使用默认经度', 'error');
                 const defaultLon = parseFloat($manualLongitude.value) || 116.4;
                 startClockWithLongitude(defaultLon, 'manual');
