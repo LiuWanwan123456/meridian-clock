@@ -1,0 +1,11 @@
+{
+  "background_color": "#eef6f3",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "真太阳时·子午流注",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "子午流注",
+  "start_url": "./index.html",
+  "theme_color": "#3a6b5a"
+}
