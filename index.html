@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#EAF3EE"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <title>真太阳时 · 子午流注</title>
+  <link rel="manifest" href="https://liuwanwan123456.github.io/solar-clock/manifest.json"/>
+  <link rel="icon" href="https://liuwanwan123456.github.io/solar-clock/icon.svg" type="image/svg+xml"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --sky:        #EEF6F3;
+      --sky-deep:   #D6EBE4;
+      --mist:       #C8DDD8;
+      --pine:       #3A6B5A;
+      --pine-deep:  #274D3E;
+      --pine-pale:  #5D8C7B;
+      --moss:       #7AAB8E;
+      --ink:        #1E3028;
+      --ink-soft:   #3D5C4A;
+      --ink-mist:   #6B8A7A;
+      --gold-leaf:  #9C7C3C;
+      --gold-pale:  #C4A86A;
+      --red-dot:    #B04040;
+      --mist-line:  rgba(58,107,90,0.18);
+      --paper:      #F5FAF7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--sky);
+      color: var(--ink);
+      font-family: 'Noto Serif SC', 'SimSun', serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* 山水背景SVG */
+    .bg-shan {
+      position: fixed;
+      bottom: 0; left: 0;
+      width: 100%; height: 38%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.22;
+    }
+
+    /* 顶部水墨线 */
+    .ink-line-top {
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--pine) 20%, var(--pine) 80%, transparent 100%);
+      opacity: 0.35;
+    }
+
+    header {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px 20px 10px;
+      position: relative;
+      z-index: 1;
+    }
+    header h1 {
+      font-size: 17px;
+      font-weight: 300;
+      letter-spacing: 8px;
+      color: var(--pine-deep);
+    }
+    header h1 span {
+      color: var(--gold-leaf);
+      letter-spacing: 2px;
+    }
+
+    .gps-badge {
+      position: absolute;
+      right: 20px;
+      font-size: 11px;
+      color: var(--ink-mist);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      letter-spacing: 1px;
+    }
+    .gps-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--mist);
+      transition: background 0.5s;
+    }
+    .gps-dot.ok  { background: var(--moss); animation: gpspulse 2.5s infinite; }
+    .gps-dot.err { background: var(--red-dot); }
+    @keyframes gpspulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    /* 细分隔线 */
+    .hair-line {
+      width: calc(100% - 40px);
+      max-width: 440px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--mist-line), transparent);
+      z-index: 1;
+      position: relative;
+    }
+
+    main {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 16px 32px;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 切换按钮 */
+    .toggle-bar {
+      display: flex;
+      background: rgba(255,255,255,0.65);
+      border: 1px solid var(--mist-line);
+      border-radius: 30px;
+      padding: 3px;
+      gap: 2px;
+      backdrop-filter: blur(4px);
+    }
+    .toggle-btn {
+      padding: 7px 24px;
+      border-radius: 26px;
+      border: none;
+      background: transparent;
+      color: var(--ink-mist);
+      font-family: 'Noto Serif SC', serif;
+      font-size: 13px;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .toggle-btn.active {
+      background: var(--pine);
+      color: #EEF6F3;
+      letter-spacing: 3px;
+    }
+
+    /* 表盘 */
+    .clock-wrap {
+      position: relative;
+      width: min(320px, 85vw);
+      height: min(320px, 85vw);
+    }
+    canvas#clockCanvas {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 4px 18px rgba(58,107,90,0.13));
+    }
+
+    /* 数字时间 */
+    .digital-time {
+      text-align: center;
+    }
+    .time-big {
+      font-size: clamp(38px, 11vw, 54px);
+      font-weight: 300;
+      letter-spacing: 3px;
+      color: var(--pine-deep);
+      line-height: 1;
+    }
+    .time-label {
+      font-size: 11px;
+      letter-spacing: 5px;
+      color: var(--ink-mist);
+      margin-top: 5px;
+    }
+    .time-date {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--ink-soft);
+      margin-top: 6px;
+    }
+
+    /* 时辰卡片 */
+    .shichen-card {
+      width: 100%;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(58,107,90,0.16);
+      border-radius: 16px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      backdrop-filter: blur(6px);
+    }
+    .shichen-symbol {
+      font-size: 46px;
+      font-weight: 300;
+      line-height: 1;
+      color: var(--pine);
+      min-width: 52px;
+      text-align: center;
+    }
+    .shichen-info h2 {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--pine-deep);
+      letter-spacing: 3px;
+    }
+    .meridian {
+      font-size: 12px;
+      color: var(--pine-pale);
+      margin-top: 4px;
+      letter-spacing: 2px;
+    }
+    .sc-tip {
+      font-size: 11px;
+      color: var(--ink-mist);
+      margin-top: 5px;
+      line-height: 1.6;
+      letter-spacing: 1px;
+    }
+
+    /* 经差信息 */
+    .offset-bar {
+      width: 100%;
+      background: rgba(255,255,255,0.5);
+      border: 1px solid var(--mist-line);
+      border-radius: 10px;
+      padding: 10px 0;
+      display: flex;
+      justify-content: space-around;
+    }
+    .offset-bar span {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      color: var(--ink-mist);
+      letter-spacing: 1px;
+    }
+    .offset-bar strong {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--pine-deep);
+      letter-spacing: 1px;
+    }
+
+    /* 分割 */
+    .divider {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink-mist);
+      font-size: 11px;
+      letter-spacing: 5px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--mist-line), transparent);
+    }
+
+    /* 十二时辰表 */
+    .shichen-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 7px;
+    }
+    .shichen-item {
+      background: rgba(255,255,255,0.6);
+      border: 1px solid rgba(58,107,90,0.13);
+      border-radius: 11px;
+      padding: 9px 11px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      transition: all 0.3s;
+    }
+    .shichen-item.current {
+      background: rgba(58,107,90,0.10);
+      border-color: var(--pine);
+    }
+    .si-glyph {
+      font-size: 22px;
+      font-weight: 300;
+      color: var(--pine-pale);
+      min-width: 26px;
+      text-align: center;
+    }
+    .shichen-item.current .si-glyph {
+      color: var(--pine-deep);
+    }
+    .si-body { flex: 1; min-width: 0; }
+    .si-name {
+      font-size: 12px;
+      color: var(--ink-soft);
+      letter-spacing: 2px;
+    }
+    .si-time {
+      font-size: 10px;
+      color: var(--ink-mist);
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+    .si-meridian {
+      font-size: 10px;
+      color: var(--pine-pale);
+      margin-top: 3px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .si-badge {
+      font-size: 9px;
+      background: var(--pine);
+      color: #EEF6F3;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      display: none;
+      flex-shrink: 0;
+    }
+    .shichen-item.current .si-badge { display: block; }
+
+    footer {
+      padding: 18px 0 24px;
+      font-size: 10px;
+      color: var(--ink-mist);
+      letter-spacing: 4px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 山水背景 -->
+<svg class="bg-shan" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax slice">
+  <!-- 远山 -->
+  <path d="M0,300 L0,200 Q80,120 160,180 Q240,140 320,100 Q400,60 480,130 Q560,160 640,100 Q720,60 800,120 L800,300Z" fill="#5D8C7B" opacity="0.35"/>
+  <!-- 中山 -->
+  <path d="M0,300 L0,240 Q60,190 140,230 Q220,200 300,160 Q380,130 460,190 Q540,220 620,170 Q700,140 800,200 L800,300Z" fill="#3A6B5A" opacity="0.4"/>
+  <!-- 近山 -->
+  <path d="M0,300 L0,270 Q100,240 200,260 Q300,250 400,220 Q500,240 600,250 Q700,260 800,240 L800,300Z" fill="#274D3E" opacity="0.45"/>
+  <!-- 水面 -->
+  <rect x="0" y="290" width="800" height="10" fill="#C8DDD8" opacity="0.6"/>
+  <!-- 水纹 -->
+  <path d="M50,294 Q200,290 350,294 Q500,298 650,294 Q720,291 800,294" fill="none" stroke="#EEF6F3" stroke-width="0.8" opacity="0.6"/>
+  <path d="M0,297 Q150,294 300,297 Q450,300 600,297 Q700,295 800,297" fill="none" stroke="#EEF6F3" stroke-width="0.6" opacity="0.4"/>
+</svg>
+
+<div class="ink-line-top"></div>
+
+<header>
+  <h1>真太阳时<span>·</span>流注</h1>
+  <div class="gps-badge">
+    <div class="gps-dot" id="gpsDot"></div>
+    <span id="gpsText">定位中</span>
+  </div>
+</header>
+<div class="hair-line"></div>
+
+<main>
+  <!-- 切换 -->
+  <div class="toggle-bar">
+    <button class="toggle-btn active" id="btnSolar" onclick="setMode('solar')">真太阳时</button>
+    <button class="toggle-btn"        id="btnLocal" onclick="setMode('local')">系统时间</button>
+  </div>
+
+  <!-- 表盘 -->
+  <div class="clock-wrap">
+    <canvas id="clockCanvas"></canvas>
+  </div>
+
+  <!-- 数字 -->
+  <div class="digital-time">
+    <div class="time-big"  id="digitalTime">--:--:--</div>
+    <div class="time-label" id="modeLabel">真太阳时</div>
+    <div class="time-date"  id="digitalDate"></div>
+  </div>
+
+  <!-- 当前时辰 -->
+  <div class="shichen-card">
+    <div class="shichen-symbol" id="scSymbol">子</div>
+    <div class="shichen-info">
+      <h2 id="scName">子时 · 胆经</h2>
+      <div class="meridian"  id="scMeridian">足少阳胆经当令</div>
+      <div class="sc-tip"   id="scTip">宜深度睡眠，胆汁排毒时段，勿熬夜</div>
+    </div>
+  </div>
+
+  <!-- 经差 -->
+  <div class="offset-bar">
+    <span><strong id="ofLon">--°</strong>当地经度</span>
+    <span><strong id="ofOffset">--分</strong>日差修正</span>
+    <span><strong id="ofZone">--</strong>时区</span>
+  </div>
+
+  <!-- 流注表 -->
+  <div class="divider">十二时辰 · 子午流注</div>
+  <div class="shichen-grid" id="shichenGrid"></div>
+</main>
+
+<footer>天人合一 · 顺时养生</footer>
+
+<script>
+// ── 数据 ──────────────────────────────────────────
+const SHICHEN = [
+  { idx:0,  glyph:'子', name:'子时', range:'23:00–01:00', hours:[23,0],  meridian:'足少阳胆经', tip:'胆汁排毒，宜深眠，勿熬夜' },
+  { idx:1,  glyph:'丑', name:'丑时', range:'01:00–03:00', hours:[1,2],   meridian:'足厥阴肝经', tip:'肝脏排毒，宜熟睡，勿饮酒' },
+  { idx:2,  glyph:'寅', name:'寅时', range:'03:00–05:00', hours:[3,4],   meridian:'手太阴肺经', tip:'肺气布散，易咳嗽，宜静卧' },
+  { idx:3,  glyph:'卯', name:'卯时', range:'05:00–07:00', hours:[5,6],   meridian:'手阳明大肠经', tip:'大肠排毒，宜如厕，多饮温水' },
+  { idx:4,  glyph:'辰', name:'辰时', range:'07:00–09:00', hours:[7,8],   meridian:'足阳明胃经', tip:'胃气旺盛，宜早餐，勿空腹' },
+  { idx:5,  glyph:'巳', name:'巳时', range:'09:00–11:00', hours:[9,10],  meridian:'足太阴脾经', tip:'脾运化旺，宜工作，忌甘厚' },
+  { idx:6,  glyph:'午', name:'午时', range:'11:00–13:00', hours:[11,12], meridian:'手少阴心经', tip:'心气当令，宜小憩，忌过劳' },
+  { idx:7,  glyph:'未', name:'未时', range:'13:00–15:00', hours:[13,14], meridian:'手太阳小肠经', tip:'小肠泌别，午餐消化，宜轻活' },
+  { idx:8,  glyph:'申', name:'申时', range:'15:00–17:00', hours:[15,16], meridian:'足太阳膀胱经', tip:'膀胱排浊，宜多饮水，可锻炼' },
+  { idx:9,  glyph:'酉', name:'酉时', range:'17:00–19:00', hours:[17,18], meridian:'足少阴肾经', tip:'肾气收藏，宜休息，忌剧烈' },
+  { idx:10, glyph:'戌', name:'戌时', range:'19:00–21:00', hours:[19,20], meridian:'手厥阴心包经', tip:'心包护心，宜散步，勿激动' },
+  { idx:11, glyph:'亥', name:'亥时', range:'21:00–23:00', hours:[21,22], meridian:'手少阳三焦经', tip:'三焦通调，宜入睡，百脉休养' },
+];
+
+function getShichen(h) {
+  if (h === 23) return SHICHEN[0];
+  for (const sc of SHICHEN) if (sc.hours.includes(h)) return sc;
+  return SHICHEN[0];
+}
+
+// ── 状态 ─────────────────────────────────────────
+let mode = 'solar';
+let userLon = null, userLat = null;
+let solarOffsetMin = 0;
+
+// ── GPS ──────────────────────────────────────────
+function requestGPS() {
+  if (!navigator.geolocation) { setGPS('err','不支持GPS'); return; }
+  navigator.geolocation.getCurrentPosition(onGPS, onGPSErr,
+    { enableHighAccuracy:true, timeout:15000, maximumAge:60000 });
+}
+function onGPS(pos) {
+  userLon = pos.coords.longitude;
+  userLat = pos.coords.latitude;
+  computeOffset();
+  setGPS('ok', userLat.toFixed(1)+'°N');
+  document.getElementById('ofLon').textContent = userLon.toFixed(2)+'°';
+  const tz = -(new Date().getTimezoneOffset()/60);
+  document.getElementById('ofZone').textContent = 'UTC+'+ tz;
+}
+function onGPSErr() {
+  setGPS('err','无法定位');
+  userLon = 120; computeOffset();
+}
+function setGPS(s,t) {
+  document.getElementById('gpsDot').className = 'gps-dot '+s;
+  document.getElementById('gpsText').textContent = t;
+}
+
+// ── 真太阳时算法 ──────────────────────────────────
+function computeOffset() {
+  const now = new Date();
+  const tzMin   = -now.getTimezoneOffset();
+  const central = (tzMin / 60) * 15;
+  const lonCorr = (userLon - central) * 4;
+  const doy = getDOY(now);
+  const B = (360/365*(doy-81)) * Math.PI/180;
+  const EoT = 9.87*Math.sin(2*B) - 7.53*Math.cos(B) - 1.5*Math.sin(B);
+  solarOffsetMin = lonCorr + EoT;
+  const sign = solarOffsetMin>=0?'+':'';
+  document.getElementById('ofOffset').textContent = sign+solarOffsetMin.toFixed(1)+'分';
+}
+function getDOY(d) {
+  return Math.floor((d - new Date(d.getFullYear(),0,0)) / 86400000);
+}
+function getSolarTime() {
+  return new Date(Date.now() + solarOffsetMin*60000);
+}
+function getDisplayTime() {
+  return mode==='solar' ? getSolarTime() : new Date();
+}
+
+// ── 模式切换 ─────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnSolar').classList.toggle('active', m==='solar');
+  document.getElementById('btnLocal').classList.toggle('active', m==='local');
+  document.getElementById('modeLabel').textContent = m==='solar'?'真太阳时':'系统时间';
+}
+
+// ── 表盘 ─────────────────────────────────────────
+const canvas = document.getElementById('clockCanvas');
+const ctx    = canvas.getContext('2d');
+let dpr = window.devicePixelRatio || 1;
+
+function resizeCanvas() {
+  const s = canvas.parentElement.offsetWidth;
+  canvas.width  = s * dpr;
+  canvas.height = s * dpr;
+  canvas.style.width  = s+'px';
+  canvas.style.height = s+'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// 色彩常量（清朗山水）
+const C = {
+  sky:      '#EEF6F3',
+  paper:    '#F5FAF7',
+  pine:     '#3A6B5A',
+  pineDeep: '#274D3E',
+  pinePale: '#5D8C7B',
+  moss:     '#7AAB8E',
+  mist:     '#C8DDD8',
+  ink:      '#1E3028',
+  inkSoft:  '#3D5C4A',
+  inkMist:  '#6B8A7A',
+  gold:     '#9C7C3C',
+  goldPale: '#C4A86A',
+  red:      '#B04040',
+  ring:     'rgba(58,107,90,0.18)',
+};
+
+function drawClock(t) {
+  const W=canvas.width, H=canvas.height, cx=W/2, cy=H/2, R=W/2*0.90;
+  ctx.clearRect(0,0,W,H);
+  const h=t.getHours(), m=t.getMinutes(), s=t.getSeconds();
+
+  // 表盘底 — 白纸质感
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.fillStyle = '#F7FBF9'; ctx.fill();
+  ctx.strokeStyle='rgba(58,107,90,0.22)'; ctx.lineWidth=dpr*1.2; ctx.stroke();
+
+  // 外装饰圈
+  ctx.beginPath(); ctx.arc(cx,cy,R*0.97,0,Math.PI*2);
+  ctx.strokeStyle='rgba(58,107,90,0.10)'; ctx.lineWidth=dpr*0.8; ctx.stroke();
+
+  // 十二时辰内环扇区
+  const SR=R*0.80, SInner=R*0.62;
+  for(let i=0;i<12;i++){
+    const a0=(i*30-90)*Math.PI/180, a1=((i+1)*30-90)*Math.PI/180;
+    ctx.beginPath();
+    ctx.moveTo(cx+SInner*Math.cos(a0), cy+SInner*Math.sin(a0));
+    ctx.arc(cx,cy,SR,a0,a1);
+    ctx.arc(cx,cy,SInner,a1,a0,true);
+    ctx.closePath();
+    const cur = getShichen(h).idx===i;
+    ctx.fillStyle = cur ? 'rgba(58,107,90,0.13)' : (i%2===0?'rgba(200,221,216,0.15)':'rgba(234,243,238,0.1)');
+    ctx.fill();
+    ctx.strokeStyle='rgba(58,107,90,0.14)'; ctx.lineWidth=dpr*0.5; ctx.stroke();
+    // 时辰字
+    const ta=(i*30+15-90)*Math.PI/180, tr=(SR+SInner)/2;
+    ctx.save();
+    ctx.translate(cx+tr*Math.cos(ta), cy+tr*Math.sin(ta));
+    ctx.rotate(ta+Math.PI/2);
+    ctx.font=`${dpr*10}px 'Noto Serif SC',serif`;
+    ctx.fillStyle = cur ? C.pine : C.inkMist;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(SHICHEN[i].glyph,0,0);
+    ctx.restore();
+  }
+
+  // 分隔线——松竹风格细线
+  ctx.beginPath(); ctx.arc(cx,cy,SInner,0,Math.PI*2);
+  ctx.strokeStyle='rgba(58,107,90,0.18)'; ctx.lineWidth=dpr*0.8; ctx.stroke();
+
+  // 刻度
+  for(let i=0;i<60;i++){
+    const ang=(i*6-90)*Math.PI/180;
+    const maj=i%5===0;
+    ctx.beginPath();
+    ctx.moveTo(cx+R*0.97*Math.cos(ang), cy+R*0.97*Math.sin(ang));
+    ctx.lineTo(cx+(maj?R*0.88:R*0.93)*Math.cos(ang), cy+(maj?R*0.88:R*0.93)*Math.sin(ang));
+    ctx.strokeStyle = maj ? C.pine : 'rgba(58,107,90,0.3)';
+    ctx.lineWidth = maj ? dpr*1.5 : dpr*0.6;
+    ctx.stroke();
+  }
+
+  // 数字时标
+  for(let i=1;i<=12;i++){
+    const ang=(i*30-90)*Math.PI/180, nr=R*0.52;
+    ctx.font=`${dpr*11}px 'Noto Serif SC',serif`;
+    ctx.fillStyle=C.inkSoft; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(i, cx+nr*Math.cos(ang), cy+nr*Math.sin(ang));
+  }
+
+  // 时针
+  const hAng=((h%12)*30+m*0.5-90)*Math.PI/180;
+  drawHand(cx,cy,hAng,R*0.30,dpr*5,C.pineDeep,R*0.06);
+
+  // 分针
+  const mAng=(m*6+s*0.1-90)*Math.PI/180;
+  drawHand(cx,cy,mAng,R*0.43,dpr*3,C.pine,R*0.05);
+
+  // 秒针
+  const sAng=(s*6-90)*Math.PI/180;
+  drawHand(cx,cy,sAng,R*0.46,dpr*1.1,C.red,R*0.09);
+
+  // 中心
+  ctx.beginPath(); ctx.arc(cx,cy,dpr*6,0,Math.PI*2);
+  ctx.fillStyle=C.pine; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy,dpr*2.5,0,Math.PI*2);
+  ctx.fillStyle=C.red; ctx.fill();
+
+  // 水墨阴阳符（淡）
+  ctx.font=`${dpr*14}px serif`;
+  ctx.fillStyle='rgba(58,107,90,0.20)';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('☯',cx,cy-R*0.24);
+}
+
+function drawHand(cx,cy,ang,len,w,color,tail){
+  ctx.save();
+  ctx.translate(cx,cy); ctx.rotate(ang);
+  ctx.beginPath();
+  ctx.moveTo(-tail,0); ctx.lineTo(len,0);
+  ctx.strokeStyle=color; ctx.lineWidth=w; ctx.lineCap='round';
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ── 数字时间 ─────────────────────────────────────
+function updateDigital(t) {
+  const hh=String(t.getHours()).padStart(2,'0');
+  const mm=String(t.getMinutes()).padStart(2,'0');
+  const ss=String(t.getSeconds()).padStart(2,'0');
+  document.getElementById('digitalTime').textContent=`${hh}:${mm}:${ss}`;
+  const wk=['日','一','二','三','四','五','六'];
+  document.getElementById('digitalDate').textContent=
+    `${t.getFullYear()}年${t.getMonth()+1}月${t.getDate()}日  星期${wk[t.getDay()]}`;
+}
+
+// ── 时辰卡片 ─────────────────────────────────────
+function updateShichenCard(h) {
+  const sc=getShichen(h);
+  document.getElementById('scSymbol').textContent=sc.glyph;
+  document.getElementById('scName').textContent=sc.name+' · '+sc.meridian;
+  document.getElementById('scMeridian').textContent=sc.meridian+'当令';
+  document.getElementById('scTip').textContent=sc.tip;
+}
+
+// ── 流注表 ───────────────────────────────────────
+function buildGrid() {
+  const g=document.getElementById('shichenGrid'); g.innerHTML='';
+  SHICHEN.forEach(sc=>{
+    const d=document.createElement('div');
+    d.className='shichen-item'; d.id='sc-'+sc.idx;
+    d.innerHTML=`<div class="si-glyph">${sc.glyph}</div>
+      <div class="si-body">
+        <div class="si-name">${sc.name}</div>
+        <div class="si-time">${sc.range}</div>
+        <div class="si-meridian">${sc.meridian}</div>
+      </div>
+      <div class="si-badge">当前</div>`;
+    g.appendChild(d);
+  });
+}
+
+let lastIdx=-1;
+function updateGrid(h) {
+  const sc=getShichen(h);
+  if(sc.idx===lastIdx) return; lastIdx=sc.idx;
+  document.querySelectorAll('.shichen-item').forEach(e=>e.classList.remove('current'));
+  const el=document.getElementById('sc-'+sc.idx);
+  if(el){ el.classList.add('current'); el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+}
+
+// ── 主循环 ───────────────────────────────────────
+function tick(){
+  const t=getDisplayTime();
+  drawClock(t); updateDigital(t);
+  updateShichenCard(t.getHours()); updateGrid(t.getHours());
+}
+
+buildGrid(); requestGPS(); tick();
+setInterval(tick,1000);
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register("https://liuwanwan123456.github.io/solar-clock/sw.js").catch(()=>{});
+</script>
+</body>
+</html>
