@@ -5,15 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>子午流注 · 真太阳时</title>
     <style>
-        /* ===== 全局重置 ===== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
-            font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
             background: #F5EDE4;
             min-height: 100vh;
             display: flex;
@@ -21,8 +19,6 @@
             align-items: center;
             padding: 16px;
         }
-
-        /* ===== 主容器 ===== */
         .container {
             max-width: 480px;
             width: 100%;
@@ -33,7 +29,6 @@
             position: relative;
             overflow: hidden;
         }
-
         .container::before {
             content: '☯';
             position: absolute;
@@ -43,8 +38,6 @@
             opacity: 0.06;
             transform: rotate(15deg);
         }
-
-        /* ===== 头部 ===== */
         .header {
             text-align: center;
             padding-bottom: 14px;
@@ -62,8 +55,6 @@
             color: #A0806A;
             margin-top: 2px;
         }
-
-        /* ===== 定位状态 ===== */
         .location-status {
             text-align: center;
             font-size: 12px;
@@ -93,15 +84,18 @@
             background: #C62828;
         }
         @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
         }
         .location-status .longitude-display {
             font-weight: 600;
             color: #4A2A1A;
         }
-
-        /* ===== 中心时间显示 ===== */
         .center-display {
             text-align: center;
             padding: 8px 0 16px;
@@ -152,8 +146,6 @@
             padding: 1px 14px;
             border-radius: 12px;
         }
-
-        /* ===== 修正信息 ===== */
         .correction-info {
             display: flex;
             justify-content: center;
@@ -172,8 +164,6 @@
             font-weight: 600;
             color: #5A3E2B;
         }
-
-        /* ===== 环形经络网格 ===== */
         .ring-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -198,7 +188,6 @@
             pointer-events: none;
             box-shadow: 0 0 0 4px #F5EDE4;
         }
-
         .cell {
             background: #FDF8F2;
             border-radius: 10px;
@@ -225,7 +214,6 @@
         .cell .icon {
             font-size: 12px;
         }
-
         .cell.active {
             background: #FFD700;
             border-color: #B8860B;
@@ -238,8 +226,6 @@
         .cell.active .hour-label {
             color: #8B6914;
         }
-
-        /* ===== 控制面板 ===== */
         .controls {
             background: #F5EDE4;
             border-radius: 16px;
@@ -301,13 +287,6 @@
         .btn-success:active {
             background: #1B5E20;
         }
-        .offset-text {
-            font-size: 18px;
-            font-weight: 700;
-            color: #8B1A1A;
-            min-width: 48px;
-            text-align: center;
-        }
         .manual-row {
             display: flex;
             align-items: center;
@@ -316,23 +295,21 @@
             flex-wrap: wrap;
             margin-top: 4px;
         }
-        .manual-row select {
-            padding: 4px 6px;
+        .manual-row input {
+            padding: 4px 8px;
             border-radius: 8px;
             border: 1.5px solid #DCC8B6;
             font-size: 16px;
             background: #fff;
-            width: 60px;
+            width: 80px;
             text-align: center;
             color: #3D2012;
             font-weight: 600;
         }
-        .manual-row select:focus {
+        .manual-row input:focus {
             outline: none;
             border-color: #8B1A1A;
         }
-
-        /* ===== 状态栏 ===== */
         .status-bar {
             display: flex;
             justify-content: space-between;
@@ -358,8 +335,6 @@
             font-size: 10px;
             color: #6B4E3A;
         }
-
-        /* ===== 加载遮罩 ===== */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -392,10 +367,10 @@
             font-size: 14px;
         }
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
-
-        /* ===== 响应式 ===== */
         @media (max-width: 400px) {
             .container {
                 padding: 16px 12px 20px;
@@ -418,379 +393,344 @@
 </head>
 <body>
 
-<!-- 加载遮罩 -->
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
-    <p>📍 正在获取位置，计算真太阳时...</p>
-</div>
-
-<div class="container" id="app">
-    <!-- 头部 -->
-    <div class="header">
-        <h1>☯ 子午流注</h1>
-        <div class="sub">真太阳时 · 天人相应</div>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>📍 正在通过 GPS 定位...</p>
+        <p style="font-size:12px;color:#999;margin-top:8px;">请允许位置权限</p>
     </div>
 
-    <!-- 定位状态 -->
-    <div style="text-align:center;">
-        <div class="location-status" id="locationStatus">
-            <span class="dot loading" id="statusDot"></span>
-            <span id="statusText">正在获取位置...</span>
-            <span class="longitude-display" id="longitudeDisplay"></span>
+    <div class="container" id="app">
+        <div class="header">
+            <h1>☯ 子午流注</h1>
+            <div class="sub">真太阳时 · 天人相应</div>
+        </div>
+
+        <div style="text-align:center;">
+            <div class="location-status" id="locationStatus">
+                <span class="dot loading" id="statusDot"></span>
+                <span id="statusText">正在通过 GPS 定位...</span>
+                <span class="longitude-display" id="longitudeDisplay"></span>
+            </div>
+        </div>
+
+        <div class="center-display">
+            <div class="time">
+                <span id="hourDisplay">--</span>:<span id="minDisplay">--</span>
+                <span class="seconds" id="secDisplay">--</span>
+                <span class="label-true">真太阳时</span>
+            </div>
+            <div class="meridian-main" id="meridianMain">--</div>
+            <div class="advice"><span id="adviceText">🌿 养生指南</span></div>
+        </div>
+
+        <div class="correction-info" id="correctionInfo">
+            <span class="item">📍 经度: <span class="val" id="displayLongitude">--</span></span>
+            <span class="item">经度修正: <span class="val" id="longOffsetDisplay">--</span></span>
+            <span class="item">均时差: <span class="val" id="eotDisplay">--</span></span>
+        </div>
+
+        <div class="ring-grid" id="ringGrid"></div>
+
+        <div class="controls" id="controlsPanel">
+            <div class="row">
+                <label>📍 定位模式</label>
+                <button class="btn btn-success" id="btnAutoLocate">GPS 定位</button>
+                <button class="btn btn-secondary" id="btnManualMode">手动输入经度</button>
+            </div>
+            <div class="manual-row" id="manualRow" style="display:none;">
+                <label>经度: </label>
+                <input type="number" id="manualLongitude" value="174.8" step="0.01">
+                <span style="color:#5A3E2B;">°E</span>
+                <button class="btn btn-primary" id="btnApplyManual">应用</button>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span class="mode" id="statusMode">📍 真太阳时模式</span>
+            <span class="tag" id="statusTag">实时更新</span>
         </div>
     </div>
 
-    <!-- 中心显示 -->
-    <div class="center-display">
-        <div class="time">
-            <span id="hourDisplay">--</span>:<span id="minDisplay">--</span>
-            <span class="seconds" id="secDisplay">--</span>
-            <span class="label-true">真太阳时</span>
-        </div>
-        <div class="meridian-main" id="meridianMain">--</div>
-        <div class="advice"><span id="adviceText">🌿 养生指南</span></div>
-    </div>
+    <script>
+        // ============================================================
+        // 十二经络数据
+        // ============================================================
+        const MERIDIANS = [
+            { hour: 23, name: '胆经', icon: '🌙', advice: '宜入睡' },
+            { hour: 1, name: '肝经', icon: '💤', advice: '熟睡养肝' },
+            { hour: 3, name: '肺经', icon: '🌅', advice: '深睡养肺' },
+            { hour: 5, name: '大肠经', icon: '🚽', advice: '宜排便' },
+            { hour: 7, name: '胃经', icon: '🍳', advice: '吃早餐' },
+            { hour: 9, name: '脾经', icon: '💪', advice: '效率高峰' },
+            { hour: 11, name: '心经', icon: '🧠', advice: '精神饱满' },
+            { hour: 13, name: '小肠经', icon: '🥗', advice: '午餐时间' },
+            { hour: 15, name: '膀胱经', icon: '💧', advice: '多喝水' },
+            { hour: 17, name: '肾经', icon: '🌆', advice: '收藏精气' },
+            { hour: 19, name: '心包经', icon: '❤️', advice: '放松心情' },
+            { hour: 21, name: '三焦经', icon: '🛀', advice: '准备入睡' }
+        ];
 
-    <!-- 修正信息 -->
-    <div class="correction-info" id="correctionInfo">
-        <span class="item">经度修正: <span class="val" id="longOffsetDisplay">--</span></span>
-        <span class="item">均时差: <span class="val" id="eotDisplay">--</span></span>
-        <span class="item">总修正: <span class="val" id="totalOffsetDisplay">--</span></span>
-    </div>
+        // ============================================================
+        // 状态
+        // ============================================================
+        let currentLongitude = null;
+        let isUsingGps = false;
+        let clockInterval = null;
 
-    <!-- 环形经络网格 -->
-    <div class="ring-grid" id="ringGrid"></div>
+        // ============================================================
+        // DOM
+        // ============================================================
+        const $hour = document.getElementById('hourDisplay');
+        const $min = document.getElementById('minDisplay');
+        const $sec = document.getElementById('secDisplay');
+        const $meridianMain = document.getElementById('meridianMain');
+        const $advice = document.getElementById('adviceText');
+        const $grid = document.getElementById('ringGrid');
+        const $statusMode = document.getElementById('statusMode');
+        const $statusTag = document.getElementById('statusTag');
+        const $longOffset = document.getElementById('longOffsetDisplay');
+        const $eotDisplay = document.getElementById('eotDisplay');
+        const $displayLongitude = document.getElementById('displayLongitude');
+        const $longitudeDisplay = document.getElementById('longitudeDisplay');
+        const $statusText = document.getElementById('statusText');
+        const $statusDot = document.getElementById('statusDot');
+        const $loadingOverlay = document.getElementById('loadingOverlay');
+        const $manualRow = document.getElementById('manualRow');
+        const $manualLongitude = document.getElementById('manualLongitude');
 
-    <!-- 控制面板 -->
-    <div class="controls" id="controlsPanel">
-        <div class="row">
-            <label>📍 定位模式</label>
-            <button class="btn btn-success" id="btnAutoLocate">GPS 定位</button>
-            <button class="btn btn-secondary" id="btnManualMode">手动输入</button>
-        </div>
-        <div class="manual-row" id="manualRow" style="display:none;">
-            <label>经度: </label>
-            <input type="number" id="manualLongitude" value="116.4" step="0.01" style="width:80px;padding:6px 8px;border-radius:8px;border:1.5px solid #DCC8B6;font-size:16px;">
-            <span style="color:#5A3E2B;">°E</span>
-            <button class="btn btn-primary" id="btnApplyManual">应用</button>
-        </div>
-    </div>
-
-    <!-- 状态栏 -->
-    <div class="status-bar">
-        <span class="mode" id="statusMode">📍 真太阳时模式</span>
-        <span class="tag" id="statusTag">实时更新</span>
-    </div>
-</div>
-
-<script>
-    // ============================================================
-    // 数据：十二经络（时辰起始小时）
-    // ============================================================
-    const MERIDIANS = [
-        { hour: 23, name: '胆经', icon: '🌙', advice: '宜入睡' },
-        { hour: 1,  name: '肝经', icon: '💤', advice: '熟睡养肝' },
-        { hour: 3,  name: '肺经', icon: '🌅', advice: '深睡养肺' },
-        { hour: 5,  name: '大肠经', icon: '🚽', advice: '宜排便' },
-        { hour: 7,  name: '胃经', icon: '🍳', advice: '吃早餐' },
-        { hour: 9,  name: '脾经', icon: '💪', advice: '效率高峰' },
-        { hour: 11, name: '心经', icon: '🧠', advice: '精神饱满' },
-        { hour: 13, name: '小肠经', icon: '🥗', advice: '午餐时间' },
-        { hour: 15, name: '膀胱经', icon: '💧', advice: '多喝水' },
-        { hour: 17, name: '肾经', icon: '🌆', advice: '收藏精气' },
-        { hour: 19, name: '心包经', icon: '❤️', advice: '放松心情' },
-        { hour: 21, name: '三焦经', icon: '🛀', advice: '准备入睡' }
-    ];
-
-    // ============================================================
-    // 状态
-    // ============================================================
-    let currentLongitude = null;        // 当前使用的经度
-    let isUsingGps = false;
-    let clockInterval = null;           // 时钟更新定时器
-
-    // ============================================================
-    // DOM 引用
-    // ============================================================
-    const $hour = document.getElementById('hourDisplay');
-    const $min = document.getElementById('minDisplay');
-    const $sec = document.getElementById('secDisplay');
-    const $meridianMain = document.getElementById('meridianMain');
-    const $advice = document.getElementById('adviceText');
-    const $grid = document.getElementById('ringGrid');
-    const $statusMode = document.getElementById('statusMode');
-    const $statusTag = document.getElementById('statusTag');
-    const $longOffset = document.getElementById('longOffsetDisplay');
-    const $eotDisplay = document.getElementById('eotDisplay');
-    const $totalOffset = document.getElementById('totalOffsetDisplay');
-    const $longitudeDisplay = document.getElementById('longitudeDisplay');
-    const $statusText = document.getElementById('statusText');
-    const $statusDot = document.getElementById('statusDot');
-    const $loadingOverlay = document.getElementById('loadingOverlay');
-    const $manualRow = document.getElementById('manualRow');
-    const $manualLongitude = document.getElementById('manualLongitude');
-
-    // ============================================================
-    // 工具：均时差计算（修复版）
-    // ============================================================
-    function equationOfTime(dayOfYear) {
-        // 近似公式，精度约 ±1 分钟
-        const B = (360.0 / 365.0) * (dayOfYear - 81);
-        const BRad = B * Math.PI / 180;
-        return 9.87 * Math.sin(2 * BRad) - 7.53 * Math.cos(BRad) - 1.5 * Math.sin(BRad);
-    }
-
-    // ============================================================
-    // 核心：计算真太阳时（修复版）
-    // ============================================================
-    function calculateTrueSolarTime(longitude) {
-        const now = new Date();
-        const utcHours = now.getUTCHours();
-        const utcMinutes = now.getUTCMinutes();
-        const utcSeconds = now.getUTCSeconds();
-
-        // 【修复】正确计算一年中的第几天
-        const startOfYear = new Date(now.getFullYear(), 0, 1); // 1月1日
-        const dayOfYear = Math.floor((now - startOfYear) / 86400000) + 1;
-
-        // 1. 经度修正（中国时区基准经度 120°E）
-        const standardMeridian = 120.0;
-        const longitudeOffset = (longitude - standardMeridian) * 4.0; // 分钟
-
-        // 2. 均时差修正（EoT）
-        const eot = equationOfTime(dayOfYear);
-
-        // 3. 总修正（分钟）
-        const totalOffset = longitudeOffset + eot;
-
-        // 4. 应用到 UTC 时间
-        let totalMinutes = utcHours * 60 + utcMinutes + totalOffset;
-        let finalHour = Math.floor(totalMinutes / 60) % 24;
-        let finalMinute = Math.round(totalMinutes % 60);
-
-        // 处理进位/借位
-        if (finalMinute >= 60) {
-            finalMinute -= 60;
-            finalHour = (finalHour + 1) % 24;
+        // ============================================================
+        // 构建经络网格
+        // ============================================================
+        function buildGrid() {
+            $grid.innerHTML = '';
+            MERIDIANS.forEach((m) => {
+                const div = document.createElement('div');
+                div.className = 'cell';
+                div.dataset.name = m.name;
+                const hourStr = String(m.hour).padStart(2, '0') + ':00';
+                div.innerHTML =
+                    `<div class="hour-label">${hourStr}</div><div class="icon">${m.icon}</div><div class="name">${m.name}</div>`;
+                $grid.appendChild(div);
+            });
         }
-        if (finalMinute < 0) {
-            finalMinute += 60;
-            finalHour = (finalHour - 1 + 24) % 24;
+        buildGrid();
+
+        // ============================================================
+        // 均时差（精确版）
+        // ============================================================
+        function equationOfTime(dayOfYear) {
+            const B = (360.0 / 365.0) * (dayOfYear - 81);
+            const BRad = B * Math.PI / 180;
+            return 9.87 * Math.sin(2 * BRad) - 7.53 * Math.cos(BRad) - 1.5 * Math.sin(BRad);
         }
-        if (finalHour < 0) finalHour += 24;
 
-        return {
-            hour: finalHour,
-            minute: finalMinute,
-            second: utcSeconds,
-            longitudeOffset: longitudeOffset,
-            eot: eot,
-            totalOffset: totalOffset,
-            dayOfYear: dayOfYear
-        };
-    }
+        // ============================================================
+        // 核心：根据经度计算真太阳时
+        // 从 UTC 时间 + 经度修正 + 均时差修正
+        // ============================================================
+        function calculateTrueSolarTime(longitude) {
+            const now = new Date();
 
-    // ============================================================
-    // 获取当前当令经络
-    // ============================================================
-    function getMeridianInfo(hour) {
-        if (hour === 23 || hour === 0) return MERIDIANS[0];
-        for (const m of MERIDIANS) {
-            if (hour >= m.hour && hour < m.hour + 2) {
-                return m;
+            // UTC 时间
+            const utcH = now.getUTCHours();
+            const utcM = now.getUTCMinutes();
+            const utcS = now.getUTCSeconds();
+
+            // 一年中的第几天
+            const startOfYear = new Date(now.getFullYear(), 0, 1);
+            const dayOfYear = Math.floor((now - startOfYear) / 86400000) + 1;
+
+            // 经度修正：从 0° 基准线开始，每度 4 分钟
+            const lonOffset = longitude * 4.0;
+
+            // 均时差修正
+            const eot = equationOfTime(dayOfYear);
+
+            // 总修正
+            const totalOffset = lonOffset + eot;
+
+            // 应用到 UTC
+            let totalMinutes = utcH * 60 + utcM + totalOffset;
+            let h = Math.floor(totalMinutes / 60) % 24;
+            let m = Math.round(totalMinutes % 60);
+
+            if (m >= 60) { m -= 60;
+                h = (h + 1) % 24; }
+            if (m < 0) { m += 60;
+                h = (h - 1 + 24) % 24; }
+            if (h < 0) h += 24;
+
+            return {
+                hour: h,
+                minute: m,
+                second: utcS,
+                lonOffset: lonOffset,
+                eot: eot,
+                totalOffset: totalOffset,
+                dayOfYear: dayOfYear,
+                longitude: longitude
+            };
+        }
+
+        // ============================================================
+        // 获取经络
+        // ============================================================
+        function getMeridianInfo(hour) {
+            if (hour === 23 || hour === 0) return MERIDIANS[0];
+            for (const m of MERIDIANS) {
+                if (hour >= m.hour && hour < m.hour + 2) {
+                    return m;
+                }
             }
-        }
-        return MERIDIANS[0];
-    }
-
-    // ============================================================
-    // 构建经络网格
-    // ============================================================
-    function buildGrid() {
-        $grid.innerHTML = '';
-        MERIDIANS.forEach((m) => {
-            const div = document.createElement('div');
-            div.className = 'cell';
-            div.dataset.name = m.name;
-            const hourStr = String(m.hour).padStart(2, '0') + ':00';
-            div.innerHTML = `
-                <div class="hour-label">${hourStr}</div>
-                <div class="icon">${m.icon}</div>
-                <div class="name">${m.name}</div>
-            `;
-            $grid.appendChild(div);
-        });
-    }
-    buildGrid();
-
-    // ============================================================
-    // 更新所有 UI（修复版）
-    // ============================================================
-    function updateUI() {
-        // 【修复】如果经度未设置，不执行更新
-        if (currentLongitude === null) {
-            return;
+            return MERIDIANS[0];
         }
 
-        const result = calculateTrueSolarTime(currentLongitude);
-        const { hour, minute, second, longitudeOffset, eot, totalOffset } = result;
-
-        // 时间
-        $hour.textContent = String(hour).padStart(2, '0');
-        $min.textContent = String(minute).padStart(2, '0');
-        $sec.textContent = String(second).padStart(2, '0');
-
-        // 经络
-        const info = getMeridianInfo(hour);
-        $meridianMain.textContent = '⚡ ' + info.name;
-        $advice.textContent = info.icon + ' ' + info.advice;
-
-        // 网格高亮
-        const cells = $grid.querySelectorAll('.cell');
-        cells.forEach(cell => {
-            cell.classList.toggle('active', cell.dataset.name === info.name);
-        });
-
-        // 修正信息
-        $longOffset.textContent = (longitudeOffset >= 0 ? '+' : '') + longitudeOffset.toFixed(1) + 'min';
-        $eotDisplay.textContent = (eot >= 0 ? '+' : '') + eot.toFixed(1) + 'min';
-        $totalOffset.textContent = (totalOffset >= 0 ? '+' : '') + totalOffset.toFixed(1) + 'min';
-
-        // 状态栏
-        const source = isUsingGps ? 'GPS' : '手动';
-        $statusMode.textContent = '📍 ' + source + ' · 经度 ' + currentLongitude.toFixed(2) + '°E';
-        $statusTag.textContent = '真太阳时 第' + result.dayOfYear + '天';
-    }
-
-    // ============================================================
-    // 设置定位状态
-    // ============================================================
-    function setLocationStatus(text, type, longitude) {
-        $statusText.textContent = text;
-        $statusDot.className = 'dot ' + type;
-        if (longitude !== undefined) {
-            $longitudeDisplay.textContent = longitude.toFixed(2) + '°E';
-        }
-        if (type === 'success') {
-            $loadingOverlay.classList.add('hidden');
-        }
-    }
-
-    // ============================================================
-    // 启动时钟（修复版）
-    // ============================================================
-    function startClockWithLongitude(longitude, source) {
-        currentLongitude = longitude;
-        isUsingGps = (source === 'gps');
-        setLocationStatus('已定位 · ' + longitude.toFixed(2) + '°E', 'success', longitude);
-
-        // 立即更新一次
-        updateUI();
-
-        // 【修复】清除旧定时器，避免重复
-        if (clockInterval) {
-            clearInterval(clockInterval);
-            clockInterval = null;
-        }
-
-        // 每秒更新
-        clockInterval = setInterval(updateUI, 1000);
-    }
-
-    // ============================================================
-    // GPS 定位
-    // ============================================================
-    function getLocationByGPS() {
-        setLocationStatus('正在获取 GPS 位置...', 'loading');
-
-        if (!navigator.geolocation) {
-            setLocationStatus('浏览器不支持 GPS', 'error');
-            showManualMode();
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            // 成功
-            (position) => {
-                const lon = position.coords.longitude;
-                setLocationStatus('GPS 定位成功', 'success', lon);
-                startClockWithLongitude(lon, 'gps');
-            },
-            // 失败
-            (error) => {
-                console.warn('GPS 定位失败:', error.message);
-                setLocationStatus('GPS 失败，使用默认经度', 'error');
-                const fallbackLon = parseFloat($manualLongitude.value) || 116.4;
-                startClockWithLongitude(fallbackLon, 'manual');
-                showManualMode();
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 60000
-            }
-        );
-    }
-
-    // ============================================================
-    // 手动模式
-    // ============================================================
-    function showManualMode() {
-        $manualRow.style.display = 'flex';
-    }
-
-    function applyManualLongitude() {
-        const val = parseFloat($manualLongitude.value);
-        if (isNaN(val) || val < -180 || val > 180) {
-            alert('请输入有效经度（-180 ~ 180）');
-            return;
-        }
-        startClockWithLongitude(val, 'manual');
-        $manualRow.style.display = 'flex';
-    }
-
-    // ============================================================
-    // 按钮事件绑定
-    // ============================================================
-    document.getElementById('btnAutoLocate').addEventListener('click', () => {
-        getLocationByGPS();
-    });
-
-    document.getElementById('btnManualMode').addEventListener('click', () => {
-        showManualMode();
-        if (currentLongitude === null) {
-            const val = parseFloat($manualLongitude.value) || 116.4;
-            startClockWithLongitude(val, 'manual');
-        }
-    });
-
-    document.getElementById('btnApplyManual').addEventListener('click', applyManualLongitude);
-
-    $manualLongitude.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') applyManualLongitude();
-    });
-
-    // ============================================================
-    // 初始化
-    // ============================================================
-    function init() {
-        // 5秒后如果还没定位成功，自动降级
-        setTimeout(() => {
+        // ============================================================
+        // 更新 UI
+        // ============================================================
+        function updateUI() {
             if (currentLongitude === null) {
-                setLocationStatus('定位超时，使用默认经度', 'error');
-                const defaultLon = parseFloat($manualLongitude.value) || 116.4;
-                startClockWithLongitude(defaultLon, 'manual');
-                showManualMode();
+                return;
             }
-        }, 5000);
 
-        // 开始 GPS 定位
-        getLocationByGPS();
-    }
+            const r = calculateTrueSolarTime(currentLongitude);
+            const { hour, minute, second, lonOffset, eot, totalOffset, longitude } = r;
 
-    // 页面加载完成后启动
-    init();
-</script>
+            $hour.textContent = String(hour).padStart(2, '0');
+            $min.textContent = String(minute).padStart(2, '0');
+            $sec.textContent = String(second).padStart(2, '0');
+
+            const info = getMeridianInfo(hour);
+            $meridianMain.textContent = '⚡ ' + info.name;
+            $advice.textContent = info.icon + ' ' + info.advice;
+
+            const cells = $grid.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.classList.toggle('active', cell.dataset.name === info.name);
+            });
+
+            $displayLongitude.textContent = longitude.toFixed(2) + '°E';
+            $longOffset.textContent = (lonOffset >= 0 ? '+' : '') + lonOffset.toFixed(1) + 'min';
+            $eotDisplay.textContent = (eot >= 0 ? '+' : '') + eot.toFixed(1) + 'min';
+
+            const source = isUsingGps ? 'GPS' : '手动';
+            $statusMode.textContent = '📍 ' + source + ' · 经度 ' + currentLongitude.toFixed(2) + '°E';
+            $statusTag.textContent = '真太阳时';
+        }
+
+        // ============================================================
+        // 启动时钟
+        // ============================================================
+        function startClockWithLongitude(longitude, source) {
+            currentLongitude = longitude;
+            isUsingGps = (source === 'gps');
+
+            $statusDot.className = 'dot success';
+            $statusText.textContent = 'GPS 定位成功 · ' + longitude.toFixed(2) + '°E';
+            $longitudeDisplay.textContent = longitude.toFixed(2) + '°E';
+            $loadingOverlay.classList.add('hidden');
+
+            if (clockInterval) {
+                clearInterval(clockInterval);
+                clockInterval = null;
+            }
+
+            updateUI();
+            clockInterval = setInterval(updateUI, 1000);
+        }
+
+        // ============================================================
+        // GPS 定位
+        // ============================================================
+        function getLocationByGPS() {
+            $statusDot.className = 'dot loading';
+            $statusText.textContent = '正在通过 GPS 定位...';
+            $loadingOverlay.classList.remove('hidden');
+
+            if (!navigator.geolocation) {
+                $statusDot.className = 'dot error';
+                $statusText.textContent = '浏览器不支持 GPS，请手动输入经度';
+                $loadingOverlay.classList.add('hidden');
+                showManualMode();
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lon = position.coords.longitude;
+                    startClockWithLongitude(lon, 'gps');
+                },
+                (error) => {
+                    console.warn('GPS 定位失败:', error.message);
+                    $statusDot.className = 'dot error';
+                    $statusText.textContent = 'GPS 定位失败，请手动输入经度';
+                    $loadingOverlay.classList.add('hidden');
+                    showManualMode();
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 60000
+                }
+            );
+        }
+
+        // ============================================================
+        // 手动模式
+        // ============================================================
+        function showManualMode() {
+            $manualRow.style.display = 'flex';
+        }
+
+        function applyManualLongitude() {
+            const val = parseFloat($manualLongitude.value);
+            if (isNaN(val) || val < -180 || val > 180) {
+                alert('请输入有效经度（-180 ~ 180）');
+                return;
+            }
+            startClockWithLongitude(val, 'manual');
+            $manualRow.style.display = 'flex';
+        }
+
+        // ============================================================
+        // 按钮绑定
+        // ============================================================
+        document.getElementById('btnAutoLocate').addEventListener('click', getLocationByGPS);
+
+        document.getElementById('btnManualMode').addEventListener('click', () => {
+            showManualMode();
+            if (currentLongitude === null) {
+                const val = parseFloat($manualLongitude.value) || 174.8;
+                startClockWithLongitude(val, 'manual');
+            }
+        });
+
+        document.getElementById('btnApplyManual').addEventListener('click', applyManualLongitude);
+
+        $manualLongitude.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') applyManualLongitude();
+        });
+
+        // ============================================================
+        // 初始化
+        // ============================================================
+        function init() {
+            $manualLongitude.value = '174.8';
+
+            // 8秒超时降级
+            setTimeout(() => {
+                if (currentLongitude === null) {
+                    $statusDot.className = 'dot error';
+                    $statusText.textContent = 'GPS 定位超时，请手动输入经度';
+                    $loadingOverlay.classList.add('hidden');
+                    showManualMode();
+                }
+            }, 8000);
+
+            getLocationByGPS();
+        }
+
+        init();
+    </script>
 
 </body>
 </html>
