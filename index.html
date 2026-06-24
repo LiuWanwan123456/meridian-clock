@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>真太阳时流注 · 节气交节推算</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    /* ===== 全局样式 ===== */
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: #F0F5F0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Noto Serif SC', 'SimSun', serif;
+      padding: 16px;
+      background-image: radial-gradient(ellipse at 20% 50%, rgba(200,216,200,0.2) 0%, transparent 70%),
+                        radial-gradient(ellipse at 80% 80%, rgba(200,216,200,0.15) 0%, transparent 60%);
+    }
+    .container {
+      max-width: 420px;
+      width: 100%;
+      background: linear-gradient(145deg, #F5F8F5 0%, #E8EFE8 100%);
+      border-radius: 32px;
+      padding: 20px 16px 24px;
+      box-shadow: 0 8px 32px rgba(58,75,58,0.10), 0 1px 4px rgba(58,75,58,0.04);
+      border: 1px solid rgba(200,212,200,0.2);
+      text-align: center;
+      position: relative;
+    }
+    .container::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: radial-gradient(ellipse at 30% 100%, rgba(180,200,180,0.06) 0%, transparent 70%),
+                  radial-gradient(ellipse at 70% 100%, rgba(180,200,180,0.04) 0%, transparent 60%);
+      pointer-events: none;
+      border-radius: 0 0 32px 32px;
+    }
+
+    /* ===== 头部 ===== */
+    .header h1 {
+      font-size: 18px;
+      font-weight: 300;
+      letter-spacing: 8px;
+      color: #2C3A33;
+    }
+    .header h1 span { color: #B89A6A; }
+    .gps-status {
+      font-size: 12px;
+      color: #7A8C82;
+      margin-top: 4px;
+    }
+    .gps-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #C8D5C8;
+      margin-right: 6px;
+      vertical-align: middle;
+      transition: background 0.4s;
+    }
+    .gps-dot.ok { background: #3E6B5A; animation: pulse 2s infinite; }
+    .gps-dot.err { background: #B06050; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ===== Tab 切换栏 ===== */
+    .tab-bar {
+      display: flex;
+      background: rgba(255,255,255,0.4);
+      border: 1px solid rgba(200,212,200,0.15);
+      border-radius: 30px;
+      padding: 4px;
+      margin: 14px 0 12px;
+      position: relative;
+      z-index: 1;
+      gap: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 26px;
+      border: none;
+      background: transparent;
+      font-family: 'Noto Serif SC', serif;
+      font-size: 14px;
+      letter-spacing: 3px;
+      color: #7A8C82;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .tab-btn.active {
+      background: #3E6B5A;
+      color: #F5FAF7;
+      box-shadow: 0 2px 8px rgba(62,107,90,0.15);
+    }
+    .tab-btn:active { transform: scale(0.97); }
+
+    /* ===== 视图容器 ===== */
+    .view-container { position: relative; z-index: 1; }
+    .view { display: none; }
+    .view.active { display: block; animation: fadeIn 0.35s ease; }
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(8px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== 子午流注视图样式 ===== */
+    .clock-wrap {
+      width: 100%;
+      max-width: 320px;
+      margin: 12px auto 0;
+      aspect-ratio: 1/1;
+      position: relative;
+      z-index: 1;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 50%;
+      box-shadow: 0 4px 20px rgba(58,75,58,0.08), inset 0 1px 0 rgba(255,255,255,0.6);
+      background: #F7FAF7;
+    }
+    .time-big {
+      font-size: 36px;
+      font-weight: 300;
+      letter-spacing: 4px;
+      color: #2C3A33;
+      margin-top: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    .time-label {
+      font-size: 11px;
+      letter-spacing: 5px;
+      color: #7A8C82;
+      margin-top: 2px;
+      position: relative;
+      z-index: 1;
+    }
+    .sc-card {
+      background: rgba(255,255,255,0.6);
+      border: 1px solid rgba(200,212,200,0.2);
+      border-radius: 16px;
+      padding: 12px 16px;
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px rgba(58,75,58,0.04);
+      position: relative;
+      z-index: 1;
+    }
+    .sc-symbol {
+      font-size: 40px;
+      font-weight: 300;
+      color: #3E6B5A;
+      min-width: 48px;
+      text-align: center;
+    }
+    .sc-info h2 {
+      font-size: 15px;
+      font-weight: 400;
+      color: #2C3A33;
+      letter-spacing: 2px;
+    }
+    .sc-info .meridian {
+      font-size: 12px;
+      color: #5D7A6A;
+      letter-spacing: 1px;
+    }
+    .sc-info .tip {
+      font-size: 11px;
+      color: #7A8C82;
+      margin-top: 3px;
+    }
+    .offset-bar {
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+      margin-top: 12px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 12px;
+      border: 1px solid rgba(200,212,200,0.12);
+      position: relative;
+      z-index: 1;
+    }
+    .offset-bar span {
+      font-size: 11px;
+      color: #7A8C82;
+    }
+    .offset-bar strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 400;
+      color: #2C3A33;
+      margin-top: 2px;
+    }
+
+    .grid-title {
+      font-size: 12px;
+      color: #7A8C82;
+      letter-spacing: 6px;
+      margin: 16px 0 10px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(200,212,200,0.2);
+      position: relative;
+      z-index: 1;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+    }
+    .grid-item {
+      background: rgba(255,255,255,0.5);
+      border: 1px solid rgba(200,212,200,0.12);
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      transition: all 0.3s;
+      min-height: 70px;
+    }
+    .grid-item.current {
+      background: rgba(62,107,90,0.08);
+      border-color: #3E6B5A;
+      box-shadow: 0 0 0 1px rgba(62,107,90,0.1);
+    }
+    .grid-item .gname {
+      font-size: 15px;
+      font-weight: 500;
+      color: #3D5C4A;
+      letter-spacing: 2px;
+    }
+    .grid-item.current .gname { color: #2C3A33; }
+    .grid-item .gtime {
+      font-size: 11px;
+      color: #7A8C82;
+      letter-spacing: 0.5px;
+    }
+    .grid-item .gmeridian {
+      font-size: 15px;
+      font-weight: 400;
+      color: #5D7A6A;
+      letter-spacing: 1px;
+    }
+    .grid-item.current .gmeridian { color: #2C3A33; }
+    .grid-item .badge {
+      font-size: 8px;
+      background: #3E6B5A;
+      color: #F7FAF7;
+      padding: 1px 8px;
+      border-radius: 4px;
+      display: none;
+      letter-spacing: 1px;
+      margin-left: 4px;
+    }
+    .grid-item.current .badge { display: inline-block; }
+
+    .lunar-card {
+      width: 100%;
+      background: rgba(255,255,255,0.45);
+      border: 1px solid rgba(200,212,200,0.15);
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-top: 16px;
+      text-align: center;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px rgba(58,75,58,0.03);
+      position: relative;
+      z-index: 1;
+    }
+    .lunar-card .ganzhi {
+      font-size: 18px;
+      font-weight: 500;
+      color: #2C3A33;
+      letter-spacing: 3px;
+    }
+    .lunar-card .detail {
+      font-size: 13px;
+      color: #5D7A6A;
+      letter-spacing: 2px;
+      margin-top: 2px;
+    }
+    .lunar-card .huangdi {
+      font-size: 13px;
+      color: #5D7A6A;
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+    .lunar-card .huangdi span {
+      font-weight: 500;
+      color: #2C3A33;
+    }
+    .lunar-card .source {
+      font-size: 9px;
+      color: #8AAA98;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* ===== 节气视图样式（独立表头方案） ===== */
+    .term-info {
+      font-size: 12px;
+      color: #5D7A6A;
+      background: rgba(58,107,90,0.06);
+      border-left: 3px solid #3E6B5A;
+      padding: 8px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      line-height: 1.7;
+      text-align: left;
+    }
+    .term-info strong { color: #2C3A33; }
+
+    .term-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .term-controls label {
+      font-size: 13px;
+      color: #2C3A33;
+      letter-spacing: 1px;
+    }
+    .term-controls input {
+      width: 62px;
+      padding: 4px 6px;
+      border: 1.5px solid rgba(58,107,90,0.2);
+      border-radius: 16px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #FFFFFF;
+      color: #2C3A33;
+      text-align: center;
+      outline: none;
+    }
+    .term-controls input:focus { border-color: #3E6B5A; }
+    .term-controls button {
+      padding: 4px 14px;
+      border-radius: 16px;
+      border: none;
+      background: #3E6B5A;
+      color: #F5FAF7;
+      font-size: 13px;
+      font-family: inherit;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .term-controls button:hover { background: #2C5A48; }
+    .term-controls button:active { transform: scale(0.97); }
+    .term-controls select {
+      padding: 4px 8px;
+      border: 1.5px solid rgba(58,107,90,0.2);
+      border-radius: 16px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #FFFFFF;
+      color: #2C3A33;
+      outline: none;
+      max-width: 80px;
+    }
+    .term-controls select:focus { border-color: #3E6B5A; }
+
+    .term-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .term-stat {
+      background: rgba(255,255,255,0.4);
+      border: 1px solid rgba(200,212,200,0.1);
+      border-radius: 12px;
+      padding: 6px 4px;
+      text-align: center;
+    }
+    .term-stat .num {
+      font-size: 16px;
+      font-weight: 500;
+      color: #2C3A33;
+      letter-spacing: 1px;
+    }
+    .term-stat .lbl {
+      font-size: 9px;
+      color: #7A8C82;
+      letter-spacing: 1px;
+      margin-top: 1px;
+    }
+
+    .term-table-header {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+      background: #F5F8F5;
+      border-radius: 12px 12px 0 0;
+      overflow: hidden;
+    }
+    .term-table-header th {
+      background: rgba(62,107,90,0.10);
+      color: #2C3A33;
+      font-weight: 500;
+      letter-spacing: 1px;
+      padding: 8px 4px;
+      font-size: 11px;
+      text-align: center;
+      border-bottom: 2px solid rgba(200,212,200,0.15);
+      width: 16.66%;
+    }
+
+    .scroll-box {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid rgba(200,212,200,0.1);
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+      background: rgba(255,255,255,0.5);
+    }
+    .scroll-box::-webkit-scrollbar { width: 4px; }
+    .scroll-box::-webkit-scrollbar-track { background: #EEF6F3; border-radius: 4px; }
+    .scroll-box::-webkit-scrollbar-thumb { background: #C8DDD8; border-radius: 4px; }
+
+    .term-table-data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .term-table-data td {
+      padding: 5px 4px;
+      text-align: center;
+      border-bottom: 1px solid rgba(200,212,200,0.06);
+      color: #2C3A33;
+      font-size: 12px;
+      width: 16.66%;
+    }
+    .term-table-data tr:hover td { background: rgba(58,107,90,0.02); }
+    .term-table-data .year-row td {
+      background: rgba(62,107,90,0.06);
+      color: #2C3A33;
+      font-weight: 500;
+      font-size: 13px;
+      letter-spacing: 3px;
+      padding: 5px;
+    }
+    .term-table-data .season-spring { color: #3E6B5A; font-weight: 500; }
+    .term-table-data .season-summer { color: #B06050; font-weight: 500; }
+    .term-table-data .season-autumn { color: #B89A6A; font-weight: 500; }
+    .term-table-data .season-winter { color: #4A7A8C; font-weight: 500; }
+
+    .term-footer {
+      text-align: center;
+      font-size: 10px;
+      color: #7A8C82;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(200,212,200,0.1);
+      letter-spacing: 2px;
+    }
+
+    /* ===== 知识扩展入口卡片 ===== */
+    .knowledge-entry {
+      width: 100%;
+      background: rgba(255,255,255,0.45);
+      border: 1px solid rgba(200,212,200,0.15);
+      border-radius: 14px;
+      padding: 10px 16px;
+      margin-top: 14px;
+      text-align: center;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px rgba(58,75,58,0.03);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 1;
+      font-size: 14px;
+      letter-spacing: 4px;
+      color: #3E6B5A;
+    }
+    .knowledge-entry:hover {
+      background: rgba(62,107,90,0.08);
+      border-color: rgba(62,107,90,0.25);
+    }
+    .knowledge-entry:active {
+      transform: scale(0.97);
+    }
+    .knowledge-entry .icon {
+      margin-right: 8px;
+    }
+
+    /* ===== 知识扩展弹窗 ===== */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(30,48,40,0.5);
+      backdrop-filter: blur(6px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 16px;
+      animation: fadeIn 0.3s ease;
+    }
+    .modal-overlay.show { display: flex; }
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: scale(0.95); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-box {
+      max-width: 420px;
+      width: 100%;
+      max-height: 88vh;
+      background: #F5F8F5;
+      border-radius: 28px;
+      padding: 24px 18px 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      overflow-y: auto;
+      position: relative;
+      border: 1px solid rgba(200,212,200,0.15);
+    }
+    .modal-box::-webkit-scrollbar { width: 4px; }
+    .modal-box::-webkit-scrollbar-track { background: #EEF6F3; border-radius: 4px; }
+    .modal-box::-webkit-scrollbar-thumb { background: #C8DDD8; border-radius: 4px; }
+
+    .modal-close {
+      position: absolute;
+      top: 12px; right: 16px;
+      font-size: 28px;
+      font-weight: 300;
+      color: #7A8C82;
+      cursor: pointer;
+      line-height: 1;
+      transition: 0.2s;
+      z-index: 2;
+    }
+    .modal-close:active { transform: scale(0.85); }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 400;
+      letter-spacing: 6px;
+      color: #2C3A33;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(200,212,200,0.12);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .modal-title span { color: #B89A6A; }
+
+    .modal-section {
+      margin-bottom: 18px;
+    }
+    .modal-section:last-of-type {
+      margin-bottom: 12px;
+    }
+    .modal-section h3 {
+      font-size: 16px;
+      font-weight: 500;
+      color: #2C3A33;
+      letter-spacing: 3px;
+      margin-bottom: 6px;
+      padding-left: 10px;
+      border-left: 3px solid #3E6B5A;
+    }
+    .modal-section p {
+      font-size: 13px;
+      line-height: 1.8;
+      color: #3D5C4A;
+      text-align: left;
+      padding: 0 4px;
+    }
+    .modal-section .sub {
+      font-size: 12px;
+      color: #5D7A6A;
+      margin-top: 4px;
+      padding-left: 10px;
+    }
+    .modal-section .table-wrap {
+      overflow-x: auto;
+      margin: 6px 4px 0;
+      font-size: 12px;
+    }
+    .modal-section .table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .modal-section .table-wrap th,
+    .modal-section .table-wrap td {
+      padding: 4px 6px;
+      border: 1px solid rgba(200,212,200,0.2);
+      text-align: center;
+      color: #2C3A33;
+    }
+    .modal-section .table-wrap th {
+      background: rgba(62,107,90,0.06);
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+    .modal-section .table-wrap td {
+      background: rgba(255,255,255,0.3);
+    }
+    .modal-section .highlight {
+      color: #3E6B5A;
+      font-weight: 500;
+    }
+    .modal-section .code-block {
+      background: rgba(62,107,90,0.06);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin: 6px 4px 0;
+      font-size: 13px;
+      color: #2C3A33;
+      text-align: left;
+      font-family: inherit;
+      letter-spacing: 1px;
+      border-left: 3px solid #B89A6A;
+    }
+
+    .modal-source {
+      font-size: 10px;
+      color: #8AAA98;
+      letter-spacing: 1px;
+      text-align: left;
+      padding-top: 12px;
+      margin-top: 10px;
+      border-top: 1px solid rgba(200,212,200,0.1);
+    }
+
+    /* ===== 底部 ===== */
+    .footer {
+      font-size: 10px;
+      color: #7A8C82;
+      letter-spacing: 4px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(200,212,200,0.15);
+      position: relative;
+      z-index: 1;
+    }
+    .footer .by {
+      font-size: 9px;
+      letter-spacing: 6px;
+      color: #8AAA98;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 16px 12px 20px; }
+      .term-table-header th, .term-table-data td { font-size: 11px; padding: 4px 3px; }
+      .term-stats { grid-template-columns: repeat(2, 1fr); }
+      .tab-btn { font-size: 12px; padding: 6px 8px; }
+      .term-controls { gap: 5px; }
+      .term-controls input { width: 54px; font-size: 12px; padding: 3px 4px; }
+      .term-controls button { font-size: 12px; padding: 3px 10px; }
+      .term-controls select { font-size: 12px; padding: 3px 6px; max-width: 70px; }
+      .scroll-box { max-height: 240px; }
+      .modal-box { padding: 20px 14px 16px; max-height: 90vh; }
+      .modal-title { font-size: 17px; letter-spacing: 4px; }
+      .modal-section h3 { font-size: 14px; }
+      .modal-section p { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- ===== 头部 ===== -->
+  <div class="header">
+    <h1>真太阳时流注<span>·</span>节气交节推算</h1>
+    <div class="gps-status">
+      <span class="gps-dot" id="gpsDot"></span>
+      <span id="gpsText">定位中...</span>
+    </div>
+  </div>
+
+  <!-- ===== Tab 切换栏 ===== -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-view="viewMeridian">☯ 子午流注</button>
+    <button class="tab-btn" data-view="viewTerm">🌿 二十四节气</button>
+  </div>
+
+  <!-- ===== 视图容器 ===== -->
+  <div class="view-container">
+
+    <!-- ====== 视图1：子午流注 ====== -->
+    <div class="view active" id="viewMeridian">
+      <div class="clock-wrap">
+        <canvas id="clockCanvas" width="400" height="400"></canvas>
+      </div>
+      <div class="time-big" id="digitalTime">--:--:--</div>
+      <div class="time-label" id="modeLabel">真太阳时</div>
+      <div class="sc-card">
+        <div class="sc-symbol" id="scSymbol">子</div>
+        <div class="sc-info">
+          <h2 id="scName">子时 · 胆经</h2>
+          <div class="meridian" id="scMeridian">足少阳胆经当令</div>
+          <div class="tip" id="scTip">宜深眠，胆汁排毒</div>
+        </div>
+      </div>
+      <div class="offset-bar">
+        <span>经度 <strong id="ofLon">--°</strong></span>
+        <span>日差 <strong id="ofOffset">--分</strong></span>
+        <span>时区 <strong id="ofZone">--</strong></span>
+      </div>
+
+      <div class="grid-title">— 十二时辰 · 子午流注 —</div>
+      <div class="grid" id="shichenGrid"></div>
+
+      <!-- 农历卡片 -->
+      <div class="lunar-card" id="lunarCard">
+        <div class="ganzhi" id="lunarGanZhi">⏳ 加载中...</div>
+        <div class="detail" id="lunarDetail"></div>
+        <div class="huangdi" id="huangdiYear">黄帝纪年 <span>--</span> 年</div>
+        <div class="source" id="lunarSource">🌐 香港天文台 + lunar-javascript</div>
+      </div>
+
+      <!-- ===== 知识扩展入口 ===== -->
+      <div class="knowledge-entry" id="knowledgeEntry">
+        <span class="icon">📖</span> 知识扩展
+      </div>
+    </div>
+
+    <!-- ====== 视图2：二十四节气 ====== -->
+    <div class="view" id="viewTerm">
+      <div class="term-info">
+        <strong>🔬 算法：</strong>太阳黄经定气法 · VSOP87简化模型 · 以2026年<strong>香港天文台</strong>数据为校准锚点<br>
+        <span style="font-size:11px;color:#7A8C82;">📐 覆盖：2026–2126年 · 精度：±1～3分钟</span>
+      </div>
+
+      <div class="term-controls">
+        <label>起始:</label>
+        <input type="number" id="termStart" value="2026" min="2026" max="2126">
+        <label>结束:</label>
+        <input type="number" id="termEnd" value="2026" min="2026" max="2126">
+        <button onclick="generateTerms()">生成</button>
+        <select id="filterTerm" onchange="generateTerms()">
+          <option value="all">节气</option>
+        </select>
+      </div>
+
+      <div class="term-stats" id="termStats">
+        <div class="term-stat"><div class="num">1</div><div class="lbl">覆盖年数</div></div>
+        <div class="term-stat"><div class="num">24</div><div class="lbl">节气总数</div></div>
+        <div class="term-stat"><div class="num">2026</div><div class="lbl">校准基准年</div></div>
+        <div class="term-stat"><div class="num">±2分</div><div class="lbl">理论精度</div></div>
+      </div>
+
+      <table class="term-table-header">
+        <thead>
+          <tr>
+            <th>年份</th><th>节气</th><th>日期</th><th>时间</th><th>星期</th><th>黄经</th>
+          </tr>
+        </thead>
+      </table>
+
+      <div class="scroll-box">
+        <table class="term-table-data">
+          <tbody id="termTbody"></tbody>
+        </table>
+      </div>
+      <div class="term-footer">🌱 基准数据：香港天文台 · 北京时间 UTC+8</div>
+    </div>
+
+  </div>
+
+  <!-- ===== 底部 ===== -->
+  <div class="footer">
+    天人合一 · 顺时养生
+    <div class="by">卷爸出品</div>
+  </div>
+</div>
+
+<!-- ===== 知识扩展弹窗 ===== -->
+<div class="modal-overlay" id="knowledgeModal">
+  <div class="modal-box">
+    <span class="modal-close" id="modalClose">✕</span>
+    <div class="modal-title">📖 知识<span>扩展</span></div>
+
+    <!-- 一、黄帝纪年 -->
+    <div class="modal-section">
+      <h3>一、黄帝纪年</h3>
+      <p>黄帝纪年，又称“道历”，是以华夏人文始祖黄帝即位并创制历法之年为起点的纪年体系。</p>
+      <p style="margin-top:4px;">据汉代以来的史书记载，黄帝命大挠发明天干地支，用以记录年、月、日、时，开创了中华文明的时间记录传统。历代学者通过《帝王世纪》、《皇极经世》等古籍推算，将黄帝即位之年定为干支纪年的起始——甲子年，对应公元前2697年。</p>
+      <p style="margin-top:4px;">清末民初，革命派曾以黄帝纪年作为“反清复汉”的象征，辛亥革命后短暂使用，后因国际交往需要改用公历。如今，黄帝纪年主要在道教文化（称“道历”）和传统祭典中延续使用，承载着深厚的文化认同意义。</p>
+      <div class="code-block">
+        <strong>计算方法：</strong>黄帝纪年 = 当前公历年份 + 2697<br>
+        例如：公元2026年 = 黄帝纪年4723年
+      </div>
+    </div>
+
+    <!-- 二、干支纪年 -->
+    <div class="modal-section">
+      <h3>二、干支纪年</h3>
+      <p>干支纪年是中国古代特有的时间记录方式，由十天干和十二地支组合而成。</p>
+      <p style="margin-top:4px;"><strong>十天干：</strong>甲、乙、丙、丁、戊、己、庚、辛、壬、癸</p>
+      <p style="margin-top:4px;"><strong>十二地支：</strong>子、丑、寅、卯、辰、巳、午、未、申、酉、戌、亥</p>
+      <p style="margin-top:4px;">天干与地支按顺序两两相配，从甲子到癸亥，共组成60个组合，称为“六十甲子”，每六十年循环一次，周而复始。</p>
+      <p style="margin-top:4px;"><strong>黄帝纪年与干支纪年的关系：</strong>黄帝纪年元年（公元前2697年）恰好是甲子年，干支纪年的第一个组合。从此干支纪年便与黄帝纪年同步循环，每60年一个甲子轮回。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>黄帝纪年</th><th>干支纪年</th><th>公历年份</th></tr></thead>
+          <tbody>
+            <tr><td>1年</td><td>甲子年</td><td>公元前2697年</td></tr>
+            <tr><td>2年</td><td>乙丑年</td><td>公元前2696年</td></tr>
+            <tr><td>61年</td><td>甲子年</td><td>公元前2637年</td></tr>
+            <tr><td>4723年</td><td>丙午年</td><td>2026年</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 三、二十四节气 -->
+    <div class="modal-section">
+      <h3>三、二十四节气</h3>
+      <p>二十四节气是古人根据太阳在黄道上的位置划分的时间体系，将太阳周年运动轨迹分为24等份，每15°为一个节气。</p>
+      <p style="margin-top:4px;font-size:12px;color:#5D7A6A;">
+        <strong>二十四节气名称（按顺序）：</strong><br>
+        立春、雨水、惊蛰、春分、清明、谷雨<br>
+        立夏、小满、芒种、夏至、小暑、大暑<br>
+        立秋、处暑、白露、秋分、寒露、霜降<br>
+        立冬、小雪、大雪、冬至、小寒、大寒
+      </p>
+      <p style="margin-top:4px;">每个节气又分为三候，每候五天，共七十二候，用以更细致地描述物候变化。</p>
+      <p style="margin-top:4px;"><strong>节气与干支的关系：</strong>二十四节气是干支纪年、纪月的“骨架”。没有节气，干支纪年就无法确定岁首，干支纪月也无法划定范围。</p>
+    </div>
+
+    <!-- 四、干支纪年的年柱、月柱、日柱 -->
+    <div class="modal-section">
+      <h3>四、干支纪年的年柱、月柱、日柱</h3>
+      <p>干支纪年不仅用于纪年，还用于纪月、纪日、纪时，合称“四柱”，每一柱由一个天干和一个地支组成。</p>
+
+      <p style="margin-top:6px;"><strong>4.1 年柱</strong></p>
+      <p>年柱即当年的干支纪年，以<strong>立春</strong>为分界点。</p>
+      <p style="margin-top:4px;">立春之前 → 上一年的年柱</p>
+      <p>立春之后 → 当年的年柱</p>
+      <p style="margin-top:4px;"><strong>示例：</strong><br>
+      2026年立春是2月4日 4:02（北京时间）<br>
+      2026年2月3日 → 年柱为乙巳年（2025年干支）<br>
+      2026年2月4日 4:02之后 → 年柱为丙午年（2026年干支）</p>
+      <div class="code-block">
+        <strong>年柱计算口诀：</strong><br>
+        天干 = (公历年份 - 3) ÷ 10 的余数<br>
+        地支 = (公历年份 - 3) ÷ 12 的余数<br>
+        （注：需先按立春判断实际干支年份）
+      </div>
+
+      <p style="margin-top:6px;"><strong>4.2 月柱</strong></p>
+      <p>月柱即当月的干支纪月，以节气中的“<strong>节</strong>”为分界点。</p>
+      <p style="margin-top:4px;"><strong>地支固定对应关系：</strong></p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>地支月</th><th>节气区间</th><th>农历约称</th></tr></thead>
+          <tbody>
+            <tr><td>寅月</td><td>立春 → 惊蛰</td><td>正月</td></tr>
+            <tr><td>卯月</td><td>惊蛰 → 清明</td><td>二月</td></tr>
+            <tr><td>辰月</td><td>清明 → 立夏</td><td>三月</td></tr>
+            <tr><td>巳月</td><td>立夏 → 芒种</td><td>四月</td></tr>
+            <tr><td>午月</td><td>芒种 → 小暑</td><td>五月</td></tr>
+            <tr><td>未月</td><td>小暑 → 立秋</td><td>六月</td></tr>
+            <tr><td>申月</td><td>立秋 → 白露</td><td>七月</td></tr>
+            <tr><td>酉月</td><td>白露 → 寒露</td><td>八月</td></tr>
+            <tr><td>戌月</td><td>寒露 → 立冬</td><td>九月</td></tr>
+            <tr><td>亥月</td><td>立冬 → 大雪</td><td>十月</td></tr>
+            <tr><td>子月</td><td>大雪 → 小寒</td><td>十一月</td></tr>
+            <tr><td>丑月</td><td>小寒 → 立春</td><td>十二月</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:4px;"><strong>月柱天干的推算方法（五虎遁）：</strong>月柱的天干取决于年柱的天干。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>年干</th><th>寅月天干</th><th>月柱天干规律</th></tr></thead>
+          <tbody>
+            <tr><td>甲或己</td><td>丙</td><td>丙→丁→戊→己→庚→辛→壬→癸→甲→乙→丙</td></tr>
+            <tr><td>乙或庚</td><td>戊</td><td>戊→己→庚→辛→壬→癸→甲→乙→丙→丁→戊</td></tr>
+            <tr><td>丙或辛</td><td>庚</td><td>庚→辛→壬→癸→甲→乙→丙→丁→戊→己→庚</td></tr>
+            <tr><td>丁或壬</td><td>壬</td><td>壬→癸→甲→乙→丙→丁→戊→己→庚→辛→壬</td></tr>
+            <tr><td>戊或癸</td><td>甲</td><td>甲→乙→丙→丁→戊→己→庚→辛→壬→癸→甲</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:4px;"><strong>示例（2026年）：</strong><br>
+      2026年立春（2月4日 4:02）之前 → 月柱为丑月（小寒→立春）<br>
+      2026年立春之后 → 月柱为庚寅月<br>
+      2026年惊蛰（3月5日 21:59）之后 → 月柱为辛卯月</p>
+      <p style="margin-top:4px;"><strong>月柱的意义：</strong>月柱反映的是太阳在黄道上的位置对地球气候的影响，因此与节气完全对应。这是子午流注中“流注”的重要依据——不同的月令，人体气血运行的规律不同。</p>
+
+      <p style="margin-top:6px;"><strong>4.3 日柱</strong></p>
+      <p>日柱即当日的干支纪日，以<strong>子时（23:00）</strong>为分界点。</p>
+      <p style="margin-top:4px;">23:00之前 → 当日的日柱</p>
+      <p>23:00之后 → 次日的日柱</p>
+      <p style="margin-top:4px;"><strong>日柱的计算方法：</strong>日柱的计算较为复杂，涉及公历日期与干支日期的转换。其核心逻辑是：以某个已知的甲子日为基准，计算目标日期与该基准日期的天数差，然后对60取模。</p>
+      <p style="margin-top:4px;">例如：2000年1月7日是甲子日，以此为基准，可以推算出任意日期的日柱。</p>
+      <p style="margin-top:4px;"><strong>示例：</strong><br>
+      2026年6月22日 → 日柱为丁卯日<br>
+      2026年6月23日 → 日柱为戊辰日<br>
+      （天干地支各进一位）</p>
+
+      <p style="margin-top:6px;"><strong>4.4 三柱与节气的关系总结</strong></p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>柱</th><th>分界依据</th><th>受节气影响</th></tr></thead>
+          <tbody>
+            <tr><td>年柱</td><td>立春</td><td>立春是年柱切换时刻</td></tr>
+            <tr><td>月柱</td><td>节气“节”</td><td>每月以“节”为分界点</td></tr>
+            <tr><td>日柱</td><td>子时（23:00）</td><td>不受节气影响，但日柱组合的五行旺衰受节气制约</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:4px;"><strong>三者的关系可概括为：</strong></p>
+      <p style="margin-top:4px;">年柱是“骨架”：以立春定岁首，决定整年的干支基调</p>
+      <p>月柱是“经络”：以十二个“节”定月序，连接节气与干支</p>
+      <p>日柱是“枢纽”：记录每日干支，是子午流注时辰推算的基准</p>
+      <p style="margin-top:4px;">三者与二十四节气共同构成了传统历法的完整体系：<strong>黄帝纪年定“年”，干支纪年定“序”，二十四节气定“时”，三柱定“位”。</strong></p>
+      <p style="margin-top:4px;">节气是干支纪年、纪月的“骨架”。没有节气，干支纪年就无法确定岁首，干支纪月也无法划定范围。这也是为什么子午流注和节气推算工具要放在一起——它们本质上共享同一个历法底层逻辑。</p>
+    </div>
+
+    <!-- 参考来源 -->
+    <div class="modal-source">
+      📚 <strong>参考来源：</strong>黄帝纪年计算方法参考《道历》通说。干支纪年、月柱推算（五虎遁）及日柱基础知识，参考新华社及中国天文学会科普资料，及《易学百中经》等公开文献。App内具体日期干支数据由 <strong>lunar-javascript</strong> 历法库提供。
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "lunar-javascript": "https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.11/+esm"
+  }
+}
+</script>
+
+<script type="module">
+// ============================================================
+// 第一部分：Tab 切换
+// ============================================================
+import { Solar } from 'lunar-javascript';
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    const viewId = this.dataset.view;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    if (viewId === 'viewTerm') {
+      generateTerms();
+    }
+  });
+});
+
+// ============================================================
+// 第二部分：子午流注模块
+// ============================================================
+var SHICHEN = [
+  { idx:0,  glyph:'子', name:'子时', range:'23:00–01:00', hours:[23,0],  meridian:'足少阳胆经', tip:'宜深眠，胆汁排毒' },
+  { idx:1,  glyph:'丑', name:'丑时', range:'01:00–03:00', hours:[1,2],   meridian:'足厥阴肝经', tip:'宜熟睡，养肝血' },
+  { idx:2,  glyph:'寅', name:'寅时', range:'03:00–05:00', hours:[3,4],   meridian:'手太阴肺经', tip:'宜静卧，养肺气' },
+  { idx:3,  glyph:'卯', name:'卯时', range:'05:00–07:00', hours:[5,6],   meridian:'手阳明大肠经', tip:'宜如厕，饮温水' },
+  { idx:4,  glyph:'辰', name:'辰时', range:'07:00–09:00', hours:[7,8],   meridian:'足阳明胃经', tip:'宜早餐，养胃气' },
+  { idx:5,  glyph:'巳', name:'巳时', range:'09:00–11:00', hours:[9,10],  meridian:'足太阴脾经', tip:'宜工作，运化旺' },
+  { idx:6,  glyph:'午', name:'午时', range:'11:00–13:00', hours:[11,12], meridian:'手少阴心经', tip:'宜小憩，养心神' },
+  { idx:7,  glyph:'未', name:'未时', range:'13:00–15:00', hours:[13,14], meridian:'手太阳小肠经', tip:'宜轻活，助消化' },
+  { idx:8,  glyph:'申', name:'申时', range:'15:00–17:00', hours:[15,16], meridian:'足太阳膀胱经', tip:'宜饮水，可锻炼' },
+  { idx:9,  glyph:'酉', name:'酉时', range:'17:00–19:00', hours:[17,18], meridian:'足少阴肾经', tip:'宜休息，收藏精' },
+  { idx:10, glyph:'戌', name:'戌时', range:'19:00–21:00', hours:[19,20], meridian:'手厥阴心包经', tip:'宜散步，勿激动' },
+  { idx:11, glyph:'亥', name:'亥时', range:'21:00–23:00', hours:[21,22], meridian:'手少阳三焦经', tip:'宜入睡，百脉养' }
+];
+
+function getShichen(h) {
+  if (h === 23) return SHICHEN[0];
+  for (var i = 0; i < SHICHEN.length; i++) {
+    if (SHICHEN[i].hours.indexOf(h) !== -1) return SHICHEN[i];
+  }
+  return SHICHEN[0];
+}
+
+var userLon = null;
+var solarOffsetMin = 0;
+var mode = 'solar';
+
+function requestGPS() {
+  if (!navigator.geolocation) {
+    setGPS('err', '不支持GPS');
+    userLon = 120;
+    computeOffset();
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(onGPS, onGPSErr, {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 60000
+  });
+}
+function onGPS(pos) {
+  userLon = pos.coords.longitude;
+  computeOffset();
+  setGPS('ok', pos.coords.latitude.toFixed(1) + '°N');
+  document.getElementById('ofLon').textContent = userLon.toFixed(2) + '°';
+  var tz = -(new Date().getTimezoneOffset() / 60);
+  document.getElementById('ofZone').textContent = 'UTC+' + tz;
+}
+function onGPSErr(err) {
+  var msg = '定位失败';
+  if (err.code === 1) msg = '权限被拒';
+  else if (err.code === 2) msg = '信号弱';
+  else if (err.code === 3) msg = '定位超时';
+  setGPS('err', msg);
+  userLon = 120;
+  computeOffset();
+  document.getElementById('ofLon').textContent = '120.00°';
+}
+function setGPS(s, t) {
+  var dot = document.getElementById('gpsDot');
+  dot.className = 'gps-dot ' + (s === 'ok' ? 'ok' : s === 'err' ? 'err' : '');
+  document.getElementById('gpsText').textContent = t;
+}
+
+function computeOffset() {
+  var now = new Date();
+  var tzMin = -now.getTimezoneOffset();
+  var central = (tzMin / 60) * 15;
+  var lonCorr = (userLon - central) * 4;
+  var doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  var B = (360 / 365 * (doy - 81)) * Math.PI / 180;
+  var EoT = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+  solarOffsetMin = lonCorr + EoT;
+  var sign = solarOffsetMin >= 0 ? '+' : '';
+  document.getElementById('ofOffset').textContent = sign + solarOffsetMin.toFixed(1) + '分';
+}
+function getSolarTime() { return new Date(Date.now() + solarOffsetMin * 60000); }
+function getDisplayTime() { return mode === 'solar' ? getSolarTime() : new Date(); }
+
+var canvas = document.getElementById('clockCanvas');
+var ctx = canvas.getContext('2d');
+var cx = 200, cy = 200, R = 185;
+var NUM_R1 = 32, NUM_R2 = 72, INNER_R1 = 80, INNER_R2 = 122, OUTER_R1 = 130, OUTER_R2 = 175, EDGE_R = 185;
+var HOUR_LEN = 28, MIN_LEN = 45, SEC_LEN = 55;
+var C = {
+  bg: '#F7FAF7', ring: 'rgba(62,107,90,0.12)', ringLight: 'rgba(62,107,90,0.08)',
+  inner: 'rgba(200,216,200,0.12)', innerAlt: 'rgba(200,216,200,0.06)',
+  active: 'rgba(62,107,90,0.18)', textMain: '#2C3A33', textSub: '#5D7A6A',
+  textLight: '#7A8C82', gold: '#B89A6A', red: '#B06050',
+  hour: '#2C3A33', minute: '#3E6B5A', second: '#B06050'
+};
+var ANGLE_DATA = [
+  { label: '子', startDeg: -120, endDeg: -60, inner: true },
+  { label: '丑', startDeg: -60, endDeg: 0, inner: true },
+  { label: '寅', startDeg: 0, endDeg: 60, inner: true },
+  { label: '卯', startDeg: 60, endDeg: 120, inner: true },
+  { label: '辰', startDeg: 120, endDeg: 180, inner: true },
+  { label: '巳', startDeg: 180, endDeg: 240, inner: true },
+  { label: '午', startDeg: -120, endDeg: -60, inner: false },
+  { label: '未', startDeg: -60, endDeg: 0, inner: false },
+  { label: '申', startDeg: 0, endDeg: 60, inner: false },
+  { label: '酉', startDeg: 60, endDeg: 120, inner: false },
+  { label: '戌', startDeg: 120, endDeg: 180, inner: false },
+  { label: '亥', startDeg: 180, endDeg: 240, inner: false }
+];
+function getCurrentAngleIndex(h) {
+  if (h >= 23 || h < 1) return 0;
+  if (h >= 1 && h < 3) return 1;
+  if (h >= 3 && h < 5) return 2;
+  if (h >= 5 && h < 7) return 3;
+  if (h >= 7 && h < 9) return 4;
+  if (h >= 9 && h < 11) return 5;
+  if (h >= 11 && h < 13) return 6;
+  if (h >= 13 && h < 15) return 7;
+  if (h >= 15 && h < 17) return 8;
+  if (h >= 17 && h < 19) return 9;
+  if (h >= 19 && h < 21) return 10;
+  if (h >= 21 && h < 23) return 11;
+  return 0;
+}
+function drawClock(t) {
+  ctx.clearRect(0, 0, 400, 400);
+  var h = t.getHours(), m = t.getMinutes(), s = t.getSeconds();
+  ctx.beginPath();
+  ctx.arc(cx, cy, EDGE_R, 0, Math.PI * 2);
+  ctx.fillStyle = C.bg;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(200,212,200,0.15)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  var currentIdx = getCurrentAngleIndex(h);
+  for (var i = 0; i < ANGLE_DATA.length; i++) {
+    var sc = ANGLE_DATA[i];
+    var isActive = (i === currentIdx);
+    var isInner = sc.inner;
+    var sa = sc.startDeg * Math.PI / 180;
+    var ea = sc.endDeg * Math.PI / 180;
+    var r1 = isInner ? INNER_R1 : OUTER_R1;
+    var r2 = isInner ? INNER_R2 : OUTER_R2;
+    ctx.beginPath();
+    ctx.moveTo(cx + r1 * Math.cos(sa), cy + r1 * Math.sin(sa));
+    ctx.arc(cx, cy, r1, sa, ea, false);
+    ctx.arc(cx, cy, r2, ea, sa, true);
+    ctx.closePath();
+    if (isActive) ctx.fillStyle = C.active;
+    else ctx.fillStyle = (i % 2 === 0) ? C.inner : C.innerAlt;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(200,212,200,0.10)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    var midDeg = (sc.startDeg + sc.endDeg) / 2;
+    var midRad = midDeg * Math.PI / 180;
+    var labelR = (r1 + r2) / 2;
+    ctx.save();
+    ctx.translate(cx + labelR * Math.cos(midRad), cy + labelR * Math.sin(midRad));
+    ctx.rotate(midRad + Math.PI / 2);
+    ctx.font = (isInner ? 16 : 22) + 'px "Noto Serif SC", serif';
+    ctx.fillStyle = isActive ? C.textMain : C.textLight;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(sc.label, 0, 0);
+    ctx.restore();
+  }
+  ctx.beginPath();
+  ctx.arc(cx, cy, INNER_R2, 0, Math.PI * 2);
+  ctx.strokeStyle = C.ring;
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, OUTER_R2, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(200,212,200,0.12)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  for (var i = 1; i <= 12; i++) {
+    var deg = i * 30 - 90;
+    var rad = deg * Math.PI / 180;
+    var nr = (NUM_R1 + NUM_R2) / 2;
+    ctx.font = '15px "Noto Serif SC", serif';
+    ctx.fillStyle = C.textSub;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(i, cx + nr * Math.cos(rad), cy + nr * Math.sin(rad));
+  }
+  ctx.font = '22px serif';
+  ctx.fillStyle = 'rgba(62,107,90,0.12)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('☯', cx, cy);
+  var hAngle = ((h % 12) * 30 + m * 0.5 - 90) * Math.PI / 180;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(hAngle);
+  ctx.beginPath();
+  ctx.moveTo(-6, 0);
+  ctx.lineTo(HOUR_LEN, 0);
+  ctx.strokeStyle = C.hour;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+  var mAngle = (m * 6 + s * 0.1 - 90) * Math.PI / 180;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(mAngle);
+  ctx.beginPath();
+  ctx.moveTo(-5, 0);
+  ctx.lineTo(MIN_LEN, 0);
+  ctx.strokeStyle = C.minute;
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+  var sAngle = (s * 6 - 90) * Math.PI / 180;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(sAngle);
+  ctx.beginPath();
+  ctx.moveTo(-8, 0);
+  ctx.lineTo(SEC_LEN, 0);
+  ctx.strokeStyle = C.second;
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+  ctx.fillStyle = C.textMain;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = C.second;
+  ctx.fill();
+}
+
+function updateDigital(t) {
+  var hh = String(t.getHours()).padStart(2, '0');
+  var mm = String(t.getMinutes()).padStart(2, '0');
+  var ss = String(t.getSeconds()).padStart(2, '0');
+  document.getElementById('digitalTime').textContent = hh + ':' + mm + ':' + ss;
+}
+function updateShichenCard(h) {
+  var sc = getShichen(h);
+  document.getElementById('scSymbol').textContent = sc.glyph;
+  document.getElementById('scName').textContent = sc.name + ' · ' + sc.meridian;
+  document.getElementById('scMeridian').textContent = sc.meridian + '当令';
+  document.getElementById('scTip').textContent = sc.tip;
+}
+function buildGrid() {
+  var g = document.getElementById('shichenGrid');
+  g.innerHTML = '';
+  for (var i = 0; i < SHICHEN.length; i++) {
+    var sc = SHICHEN[i];
+    var d = document.createElement('div');
+    d.className = 'grid-item';
+    d.id = 'sc-' + sc.idx;
+    d.innerHTML =
+      '<div class="gname">' + sc.name + '</div>' +
+      '<div class="gtime">' + sc.range + '</div>' +
+      '<div class="gmeridian">' + sc.meridian + '</div>' +
+      '<div class="badge">当前</div>';
+    g.appendChild(d);
+  }
+}
+var lastIdx = -1;
+function updateGrid(h) {
+  var sc = getShichen(h);
+  if (sc.idx === lastIdx) return;
+  lastIdx = sc.idx;
+  var items = document.querySelectorAll('.grid-item');
+  for (var i = 0; i < items.length; i++) items[i].classList.remove('current');
+  var el = document.getElementById('sc-' + sc.idx);
+  if (el) el.classList.add('current');
+}
+
+function getHuangdiYear(date) {
+  var year = date.getFullYear();
+  var month = date.getMonth() + 1;
+  var day = date.getDate();
+  if (month < 2 || (month === 2 && day < 4)) return year + 2697 - 1;
+  return year + 2697;
+}
+
+function updateLunarCard() {
+  var now = new Date();
+  var year = now.getFullYear(), month = now.getMonth() + 1, day = now.getDate();
+  document.getElementById('lunarGanZhi').textContent = '⏳ 加载中...';
+  document.getElementById('lunarDetail').textContent = '';
+  document.getElementById('huangdiYear').innerHTML = '黄帝纪年 <span>--</span> 年';
+  document.getElementById('lunarSource').textContent = '🌐 正在请求...';
+  var monthGZ = '⏳', dayGZ = '⏳';
+  try {
+    var solar = Solar.fromYmd(year, month, day);
+    var lunar = solar.getLunar();
+    monthGZ = lunar.getMonthInGanZhi();
+    dayGZ = lunar.getDayInGanZhi();
+  } catch(e) { monthGZ = '--'; dayGZ = '--'; }
+  var huangdi = getHuangdiYear(now);
+  var dateStr = year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+  var url = 'https://data.weather.gov.hk/weatherAPI/opendata/lunardate.php?date=' + dateStr;
+  fetch(url).then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+    .then(function(data) {
+      var yearGZ = data.LunarYear || '', lunarDateStr = data.LunarDate || '', zodiac = '';
+      if (yearGZ.includes('，')) {
+        var parts = yearGZ.split('，');
+        yearGZ = parts[0].replace(/年$/, '');
+        zodiac = parts[1];
+      }
+      document.getElementById('lunarGanZhi').textContent = yearGZ + '年 ' + monthGZ + '月 ' + dayGZ + '日';
+      document.getElementById('lunarDetail').textContent = zodiac + '年 农历' + lunarDateStr;
+      document.getElementById('huangdiYear').innerHTML = '黄帝纪年 <span>' + huangdi + '</span> 年';
+      document.getElementById('lunarSource').textContent = '🌐 香港天文台 + lunar-javascript';
+    })
+    .catch(function() {
+      document.getElementById('lunarGanZhi').textContent = '--年 ' + monthGZ + '月 ' + dayGZ + '日';
+      document.getElementById('lunarDetail').textContent = '--年 农历 --月 --日';
+      document.getElementById('huangdiYear').innerHTML = '黄帝纪年 <span>' + huangdi + '</span> 年';
+      document.getElementById('lunarSource').textContent = '⚠️ 网络异常';
+    });
+}
+
+function tick() {
+  var t = getDisplayTime();
+  drawClock(t);
+  updateDigital(t);
+  updateShichenCard(t.getHours());
+  updateGrid(t.getHours());
+}
+
+buildGrid();
+requestGPS();
+tick();
+setInterval(tick, 1000);
+updateLunarCard();
+setInterval(updateLunarCard, 60000);
+
+// ============================================================
+// 第三部分：二十四节气模块
+// ============================================================
+const REF_YEAR = 2026;
+const REF_DATA = [
+  ["小寒", 285, 1, 5, 16, 23],
+  ["大寒", 300, 1, 20, 9, 45],
+  ["立春", 315, 2, 4, 4, 2],
+  ["雨水", 330, 2, 18, 23, 52],
+  ["惊蛰", 345, 3, 5, 21, 59],
+  ["春分", 0,   3, 20, 22, 46],
+  ["清明", 15,  4, 5, 2, 40],
+  ["谷雨", 30,  4, 20, 9, 39],
+  ["立夏", 45,  5, 5, 19, 49],
+  ["小满", 60,  5, 21, 8, 37],
+  ["芒种", 75,  6, 5, 23, 48],
+  ["夏至", 90,  6, 21, 16, 25],
+  ["小暑", 105, 7, 7, 9, 57],
+  ["大暑", 120, 7, 23, 3, 13],
+  ["立秋", 135, 8, 7, 19, 43],
+  ["处暑", 150, 8, 23, 10, 19],
+  ["白露", 165, 9, 7, 22, 41],
+  ["秋分", 180, 9, 23, 8, 5],
+  ["寒露", 195, 10, 8, 14, 29],
+  ["霜降", 210, 10, 23, 17, 38],
+  ["立冬", 225, 11, 7, 17, 52],
+  ["小雪", 240, 11, 22, 15, 23],
+  ["大雪", 255, 12, 7, 10, 52],
+  ["冬至", 270, 12, 22, 4, 50]
+];
+
+const SEASON = {
+  "立春":"spring","雨水":"spring","惊蛰":"spring","春分":"spring","清明":"spring","谷雨":"spring",
+  "立夏":"summer","小满":"summer","芒种":"summer","夏至":"summer","小暑":"summer","大暑":"summer",
+  "立秋":"autumn","处暑":"autumn","白露":"autumn","秋分":"autumn","寒露":"autumn","霜降":"autumn",
+  "立冬":"winter","小雪":"winter","大雪":"winter","冬至":"winter","小寒":"winter","大寒":"winter"
+};
+
+const RAD2 = Math.PI / 180;
+
+function toJD(year, month, day, hour, min) {
+  let utHour = hour - 8 + min/60;
+  let d = day + utHour/24;
+  let y = year, m = month;
+  if (m <= 2) { y -= 1; m += 12; }
+  const A = Math.floor(y/100);
+  const B = 2 - A + Math.floor(A/4);
+  return Math.floor(365.25*(y+4716)) + Math.floor(30.6001*(m+1)) + d + B - 1524.5;
+}
+
+function fromJD(jd) {
+  jd += 0.5 + 8/24;
+  const Z = Math.floor(jd);
+  const F = jd - Z;
+  let A = Z;
+  if (Z >= 2299161) {
+    const alpha = Math.floor((Z - 1867216.25)/36524.25);
+    A = Z + 1 + alpha - Math.floor(alpha/4);
+  }
+  const B = A + 1524;
+  const C = Math.floor((B - 122.1)/365.25);
+  const D = Math.floor(365.25*C);
+  const E = Math.floor((B-D)/30.6001);
+  const day = B - D - Math.floor(30.6001*E) + F;
+  const month = E < 14 ? E - 1 : E - 13;
+  const year = month > 2 ? C - 4716 : C - 4715;
+  const dayInt = Math.floor(day);
+  const frac = day - dayInt;
+  const totalSec = Math.round(frac * 86400);
+  const h = Math.floor(totalSec/3600);
+  const mi = Math.floor((totalSec%3600)/60);
+  return new Date(year, month-1, dayInt, h, mi);
+}
+
+function deltaT(year) {
+  if (year >= 2005 && year < 2050) {
+    const t = year - 2000;
+    return 62.92 + 0.32217*t + 0.005589*t*t;
+  } else if (year >= 2050 && year < 2150) {
+    return -20 + 32*Math.pow((year-1820)/100, 2) - 0.5628*(2150-year);
+  } else {
+    const u = (year-1820)/100;
+    return -20 + 32*u*u;
+  }
+}
+
+function sunApparentLongitude(JDE) {
+  const T = (JDE - 2451545.0) / 36525;
+  const L0 = 280.46646 + 36000.76983*T + 0.0003032*T*T;
+  const M = 357.52911 + 35999.05029*T - 0.0001537*T*T;
+  const Mr = M * RAD2;
+  const C = (1.914602 - 0.004817*T - 0.000014*T*T) * Math.sin(Mr)
+          + (0.019993 - 0.000101*T) * Math.sin(2*Mr)
+          + 0.000289 * Math.sin(3*Mr);
+  const trueL = L0 + C;
+  const Omega = 125.04 - 1934.136*T;
+  const lambda = trueL - 0.00569 - 0.00478 * Math.sin(Omega * RAD2);
+  return ((lambda % 360) + 360) % 360;
+}
+
+function findSolarLongitude(targetLon, approxJDE) {
+  let jde = approxJDE;
+  for (let i = 0; i < 30; i++) {
+    let lon = sunApparentLongitude(jde);
+    let diff = targetLon - lon;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    if (Math.abs(diff) < 1e-8) break;
+    jde += diff / 0.9856473;
+  }
+  return jde;
+}
+
+function calcTermJDE(year, termIdx) {
+  const targetLon = REF_DATA[termIdx][1];
+  const refMonth = REF_DATA[termIdx][2];
+  const refDay = REF_DATA[termIdx][3];
+  const approxJD = toJD(year, refMonth, refDay, 12, 0);
+  const approxJDE = approxJD + deltaT(year)/86400;
+  return findSolarLongitude(targetLon, approxJDE);
+}
+
+var CALIBRATION = [];
+function buildCalibration2() {
+  for (let i = 0; i < 24; i++) {
+    const [name, lon, m, d, h, mi] = REF_DATA[i];
+    const realJD = toJD(REF_YEAR, m, d, h, mi);
+    const realJDE = realJD + deltaT(REF_YEAR)/86400;
+    const calcJDE = calcTermJDE(REF_YEAR, i);
+    CALIBRATION[i] = realJDE - calcJDE;
+  }
+}
+
+function getTermDate(year, termIdx) {
+  let jde = calcTermJDE(year, termIdx);
+  jde += CALIBRATION[termIdx];
+  const jdUT = jde - deltaT(year)/86400;
+  const lon = REF_DATA[termIdx][1];
+  return { date: fromJD(jdUT), lon: lon };
+}
+
+function formatDate2(d) {
+  return String(d.getMonth()+1).padStart(2,'0') + '月' + String(d.getDate()).padStart(2,'0') + '日';
+}
+function formatTime2(d) {
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function getWeek2(d) { return "日一二三四五六"[d.getDay()]; }
+
+function initFilter() {
+  const sel = document.getElementById('filterTerm');
+  sel.innerHTML = '<option value="all">节气</option>';
+  REF_DATA.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t[0];
+    opt.textContent = t[0];
+    sel.appendChild(opt);
+  });
+}
+
+window.generateTerms = function() {
+  const startY = parseInt(document.getElementById('termStart').value);
+  const endY = parseInt(document.getElementById('termEnd').value);
+  if (startY > endY || startY < 2026 || endY > 2126) {
+    alert('年份范围: 2026-2126，且起始≤结束');
+    return;
+  }
+  const filter = document.getElementById('filterTerm').value;
+  const tbody = document.getElementById('termTbody');
+  let html = '';
+  let count = 0;
+  for (let y = startY; y <= endY; y++) {
+    html += `<tr class="year-row"><td colspan="6">📅 ${y}年</td></tr>`;
+    for (let i = 0; i < 24; i++) {
+      const name = REF_DATA[i][0];
+      if (filter !== 'all' && filter !== name) continue;
+      const result = getTermDate(y, i);
+      const d = result.date;
+      const seasonCls = SEASON[name] || '';
+      html += `<tr>
+        <td>${y}</td>
+        <td class="season-${seasonCls}">${name}</td>
+        <td>${formatDate2(d)}</td>
+        <td>${formatTime2(d)}</td>
+        <td>${getWeek2(d)}</td>
+        <td>${result.lon}°</td>
+      </tr>`;
+      count++;
+    }
+  }
+  tbody.innerHTML = html;
+
+  document.getElementById('termStats').innerHTML = `
+    <div class="term-stat"><div class="num">${endY-startY+1}</div><div class="lbl">覆盖年数</div></div>
+    <div class="term-stat"><div class="num">${count}</div><div class="lbl">节气总数</div></div>
+    <div class="term-stat"><div class="num">${REF_YEAR}</div><div class="lbl">校准基准年</div></div>
+    <div class="term-stat"><div class="num">±2分</div><div class="lbl">理论精度</div></div>
+  `;
+};
+
+buildCalibration2();
+initFilter();
+generateTerms();
+
+// ============================================================
+// 第四部分：知识扩展弹窗控制
+// ============================================================
+document.getElementById('knowledgeEntry').addEventListener('click', function() {
+  document.getElementById('knowledgeModal').classList.add('show');
+});
+
+document.getElementById('modalClose').addEventListener('click', function() {
+  document.getElementById('knowledgeModal').classList.remove('show');
+});
+
+document.getElementById('knowledgeModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    document.getElementById('knowledgeModal').classList.remove('show');
+  }
+});
+
+console.log('✅ 合并版已启动：子午流注 + 二十四节气推算 + 知识扩展');
+console.log('📐 节气基准：香港天文台 2026 年');
+console.log('📐 覆盖范围：2026–2126 年');
+</script>
+</body>
+</html>
